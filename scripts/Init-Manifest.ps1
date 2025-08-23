@@ -15,6 +15,9 @@ Set-StrictMode -Version 1
 
 $allFonts = [ordered]@{}
 
+Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
+(Get-MapleMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
 Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
 (Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
