@@ -13,18 +13,21 @@ param (
 
 Set-StrictMode -Version 1
 
-Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
-
 $allFonts = [ordered]@{}
+
+Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
 (Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
+Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
+(Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
 Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
     if (-not $allFonts.Contains($_.BaseName)) {
         if ($Clean) {
-            Write-Host "delete unmanaged manifest: $($_.BaseName)" -ForegroundColor Red
-            Remove-Item -Path $_.FullName -Force
+            Write-Host "unmanaged manifest deprecated: $($_.BaseName)" -ForegroundColor Yellow
+            Copy-Item -Path $_.FullName -Destination "$PSScriptRoot\deprecated\$($_.BaseName).json"
         } else {
-            Write-Host "found unmanaged manifest: $($_.BaseName)" -ForegroundColor Yellow
+            Write-Host "unmanaged manifest detected: $($_.BaseName)" -ForegroundColor DarkGray
         }
     }
 }
