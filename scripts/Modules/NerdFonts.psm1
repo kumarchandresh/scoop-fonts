@@ -111,15 +111,17 @@ function Get-NerdFonts {
                 @{patchedName = $font.patchedName; variants = @('', 'Mono', 'Propo') }
             )
         }
+        $folderRegex = [regex]::Escape($folderName)
         foreach ($flavor in $flavors) {
             $patchedName = $flavor.patchedName
             foreach ($variant in $flavor.variants) {
                 $fontName = "${patchedName}NerdFont${variant}"
+                $fontRegex = [regex]::Escape($fontName)
                 $manifests[$fontName] = @{
                     Name    = $fontName
                     Repo    = 'ryanoasis/nerd-fonts'
-                    Regex   = "/v?([\d.]+)/${folderName}\.tar\.xz"
-                    Filter  = "$([regex]::Escape($fontName))-.*\.[ot]tf$"
+                    Regex   = "/v?([\d.]+)/${folderRegex}\.tar\.xz"
+                    Filter  = "${fontRegex}-.*\.[ot]tf$"
                     License = $font.licenseId
                     Desc    = $font.description
                 }

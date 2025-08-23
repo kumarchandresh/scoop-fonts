@@ -13,7 +13,7 @@ param (
 
 Set-StrictMode -Version 1
 
-Import-Module -Force "$PSScriptRoot\nerd-fonts.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
 
 $allFonts = [ordered]@{}
 (Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
