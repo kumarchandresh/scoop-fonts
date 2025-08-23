@@ -21,6 +21,9 @@ Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
 (Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
+Import-Module -Force "$PSScriptRoot\Modules\Monaspace.psm1"
+(Get-MonaspaceFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
 Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
     if (-not $allFonts.Contains($_.BaseName)) {
         if ($Clean) {
@@ -90,7 +93,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
 
 
     if (-not $var.ContainsKey('Filter')) {
-        $var.Filter = '.*'
+        throw "missing filter: $($var.Name)"
     }
 
     if ($Fonts.Count -ne 0 -and $Fonts.Where({ $var.Name -match $_ }).Count -eq 0) {
