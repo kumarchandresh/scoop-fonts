@@ -1,13 +1,15 @@
 function Get-MonaspaceFonts {
-    $urls = (Invoke-WebRequest 'https://api.github.com/repos/githubnext/monaspace/releases/latest').Content | jq -r '.assets[] | .browser_download_url' | Where-Object { $_ -notmatch 'webfont' }
-
+    Write-Host 'Fetching release data for Monaspace...'
+    $urls = (Invoke-WebRequest 'https://api.github.com/repos/githubnext/monaspace/releases/latest').Content | ConvertFrom-Json | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' -and $_ -notmatch 'webfont' }
+    if ($urls.Count -eq 0) {
+        Write-Warning 'Monaspace: Failed to fetch release data from GitHub API.'
+    }
     $config = @{
         static    = @{ dir = 'Static Fonts'  ; suffix = '' }
         variable  = @{ dir = 'Variable Fonts'; suffix = 'Var' }
         nerdfonts = @{ dir = 'NerdFonts'     ; suffix = 'NF' }
         frozen    = @{ dir = 'Frozen Fonts'  ; suffix = 'Frozen' }
     }
-
     $manifests = [ordered]@{}
     foreach ($url in $urls) {
         $regex = [regex]::new('monaspace-(\w+)-v?[\d.]+\.zip')

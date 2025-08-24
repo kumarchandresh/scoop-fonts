@@ -1,6 +1,9 @@
 function Get-MapleMonoFonts {
-    $urls = (Invoke-WebRequest 'https://api.github.com/repos/subframe7536/maple-font/releases/latest').Content | jq -r '.assets[] | .browser_download_url' | Where-Object { $_ -match '\.zip$' -and $_ -notmatch '-Woff2' }
-
+    Write-Host 'Fetching release data for Maple Mono...'
+    $urls = (Invoke-WebRequest 'https://api.github.com/repos/subframe7536/maple-font/releases/latest').Content | ConvertFrom-Json | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' -and $_ -notmatch '-Woff2' }
+    if ($urls.Count -eq 0) {
+        Write-Warning 'Maple Mono: Failed to fetch release data from GitHub API.'
+    }
     $manifests = [ordered]@{}
     foreach ($url in $urls) {
         $regex = [regex]::new('(MapleMono\w*-[\w-]+)\.zip')

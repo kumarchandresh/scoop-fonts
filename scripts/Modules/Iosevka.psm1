@@ -1,6 +1,9 @@
 function Get-IosevkaFonts {
-    $urls = (Invoke-WebRequest 'https://api.github.com/repos/be5invis/Iosevka/releases/latest').Content | jq -r '.assets[] | .browser_download_url'
-
+    Write-Host 'Fetching release data for Iosevka...'
+    $urls = (Invoke-WebRequest 'https://api.github.com/repos/be5invis/Iosevka/releases/latest').Content | ConvertFrom-Json | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' }
+    if ($urls.Count -eq 0) {
+        Write-Warning 'Iosevka: Failed to fetch release data from GitHub API.'
+    }
     $manifests = [ordered]@{}
     $ttfRegex = 'Pkg(TTF(-Unhinted)?)-(Iosevka\w*)-[\d.]+\.zip'
     foreach ($url in ($urls | Where-Object { $_ -match $ttfRegex })) {

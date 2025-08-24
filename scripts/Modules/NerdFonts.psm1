@@ -1,7 +1,9 @@
 function Get-NerdFonts {
-
+    Write-Host 'Fetching release data for Nerd Fonts...'
     $fonts = ((Invoke-WebRequest 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json').Content | ConvertFrom-Json).fonts
-
+    if ($fonts.Count -eq 0) {
+        Write-Warning 'Nerd Fonts: Failed to fetch release data from GitHub.'
+    }
     $manifests = [ordered]@{}
     foreach ($font in $fonts) {
         $folderName = $font.folderName

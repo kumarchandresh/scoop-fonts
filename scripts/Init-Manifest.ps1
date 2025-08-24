@@ -15,14 +15,14 @@ Set-StrictMode -Version 1
 
 $allFonts = [ordered]@{}
 
-Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
-(Get-MapleMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
 Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
 (Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
 Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
 (Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
+Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
+(Get-MapleMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
 Import-Module -Force "$PSScriptRoot\Modules\Monaspace.psm1"
 (Get-MonaspaceFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
@@ -96,7 +96,8 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
 
 
     if (-not $var.ContainsKey('Filter')) {
-        throw "missing filter: $($var.Name)"
+        Write-Error "missing filter: $($var.Name)"
+        continue
     }
 
     if ($Fonts.Count -ne 0 -and $Fonts.Where({ $var.Name -match $_ }).Count -eq 0) {
