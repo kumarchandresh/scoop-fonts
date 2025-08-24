@@ -6,13 +6,14 @@ $regKey = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
 
 $files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -match $filter }
 if ($files.Count -eq 0) {
-    throw 'Failed to find fonts to install. Please recheck the filter.'
+    Write-Error 'Failed to find fonts to install. Please recheck the filter.' -ErrorAction Stop
 }
 
 $fonts = @()
 foreach ($file in $files) {
-    if (-not ($file.Name -match '\.(ttf|otf|ttc)$')) {
-        throw 'Unsupported font format. Please use TTF, OTF, or TTC files.'
+    if (-not ($file.Name -match '\.(ttf|otf|ttc|otc)$')) {
+        Write-Error 'Unsupported font format. Please use TTF or OTF files.'
+        continue
     }
     $fileUri = [uri]::new($file.FullName)
     $glyphTypeface = $null
@@ -64,15 +65,20 @@ foreach ($file in $files) {
         [System.GC]::Collect()
 
         try {
-            Remove-Item -LiteralPath $fontPath -Force -ErrorAction Stop
-            Start-Sleep -Milliseconds 100  # Give Windows a moment to release the file handle
+            Remove-Item -LiteralPath $fontPath -Force
+            # Give Windows a moment to release the file handle
+            Start-Sleep -Milliseconds 100
         } catch {
-            Write-Host "Failed to remove font: $fontPath; $($_.Exception.Message)" -ForegroundColor Red
+            Write-Error "Failed to remove existing font file $($file.Name): $($_.Exception.Message)"
             continue
         }
     }
-    Remove-ItemProperty -Path $regKey -Name $regValueName -ErrorAction Stop
-    $font.Success = $true
+    try {
+        Remove-ItemProperty -Path $regKey -Name $regValueName -ErrorAction Stop
+        $font.Success = $true
+    } catch {
+        Write-Error "Failed to uninstall font $($file.Name): $($_.Exception.Message)"
+    }
 }
 if ($fonts.Count -gt 0) {
     $fonts | Select-Object @{Name = 'Font'; Expression = { $_.File.Name } }, Registry, Success | Format-Table -AutoSize
