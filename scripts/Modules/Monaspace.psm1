@@ -1,6 +1,13 @@
 function Get-MonaspaceFonts {
+    $headers = @{
+        "User-Agent" = "PowerShell"
+        "Accept"     = "application/vnd.github.v3+json"
+    }
+    if ($env:GITHUB_TOKEN) {
+        $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+    }
     Write-Host 'Fetching release data for Monaspace...'
-    $urls = (Invoke-WebRequest 'https://api.github.com/repos/githubnext/monaspace/releases/latest').Content | ConvertFrom-Json | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' -and $_ -notmatch 'webfont' }
+    $urls = Invoke-RestMethod 'https://api.github.com/repos/githubnext/monaspace/releases/latest' -Headers $headers | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' -and $_ -notmatch 'webfont' }
     if ($urls.Count -eq 0) {
         Write-Warning 'Monaspace: Failed to fetch release data from GitHub API.'
     }
