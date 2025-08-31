@@ -15,8 +15,8 @@ Set-StrictMode -Version 1
 
 $allFonts = [ordered]@{}
 
-Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
-(Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+Import-Module -Force "$PSScriptRoot\Modules\0xType.psm1"
+(Get-0xTypeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
 Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
 (Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
@@ -26,6 +26,9 @@ Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
 
 Import-Module -Force "$PSScriptRoot\Modules\Monaspace.psm1"
 (Get-MonaspaceFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
+Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
+(Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
 Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
     if (-not $allFonts.Contains($_.BaseName)) {
