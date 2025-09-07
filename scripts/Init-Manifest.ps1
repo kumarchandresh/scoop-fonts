@@ -15,6 +15,9 @@ Set-StrictMode -Version 1
 
 $allFonts = [ordered]@{}
 
+Import-Module -Force "$PSScriptRoot\Modules\CascadiaCode.psm1"
+(Get-CascadiaCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
 Import-Module -Force "$PSScriptRoot\Modules\0xType.psm1"
 (Get-0xTypeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
@@ -141,6 +144,9 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
                 $license = $var.License
             }
             $cache[$cacheKey] = @{Repo = $repo; License = $license }
+        }
+        if ($var.ContainsKey('License')) {
+            $license = $var.License
         }
 
         if ($null -eq $repo) {
