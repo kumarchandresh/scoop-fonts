@@ -1,6 +1,13 @@
 function Get-NerdFonts {
+    $headers = @{
+        "User-Agent" = "PowerShell"
+        "Accept"     = "application/vnd.github.v3+json"
+    }
+    if ($env:GITHUB_TOKEN) {
+        $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+    }
     Write-Host 'Fetching release data for Nerd Fonts...'
-    $fonts = ((Invoke-WebRequest 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json').Content | ConvertFrom-Json).fonts
+    $fonts = (Invoke-RestMethod 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers).fonts
     if ($fonts.Count -eq 0) {
         Write-Warning 'Nerd Fonts: Failed to fetch release data from GitHub.'
     }

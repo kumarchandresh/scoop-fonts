@@ -1,6 +1,13 @@
 function Get-IBMPlexFonts {
+    $headers = @{
+        "User-Agent" = "PowerShell"
+        "Accept"     = "application/vnd.github.v3+json"
+    }
+    if ($env:GITHUB_TOKEN) {
+        $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+    }
     Write-Host 'Fetching release data for IBM Plex...'
-    $urls = (Invoke-WebRequest 'https://api.github.com/repos/IBM/plex/releases').Content | ConvertFrom-Json | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' }
+    $urls = Invoke-RestMethod 'https://api.github.com/repos/IBM/plex/releases' -Headers $headers | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' }
     if ($urls.Count -eq 0) {
         Write-Warning 'IBM Plex: Failed to fetch release data from GitHub API.'
     }
