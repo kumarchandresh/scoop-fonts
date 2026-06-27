@@ -1,10 +1,10 @@
 {
-    "version": "34.6.3",
+    "version": "34.7.0",
     "description": "Versatile typeface for code, from code.",
     "homepage": "https://github.com/be5invis/Iosevka",
     "license": "OFL-1.1",
-    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.6.3/PkgTTF-Unhinted-IosevkaTermCurly-34.6.3.zip",
-    "hash": "a4d334bd3a620816d6ada71193b140da370cc2888ff6474ebd45704f0ec95c52",
+    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.7.0/PkgTTF-Unhinted-IosevkaTermCurly-34.7.0.zip",
+    "hash": "18ed2dbab5b735fee0793c63e61bfd5695430e356b514764db6a8a9b1980e3da",
     "installer": {
         "script": [
             "$filter = 'IosevkaTermCurly-.*\\.ttf$'",
