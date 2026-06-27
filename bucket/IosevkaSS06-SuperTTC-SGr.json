@@ -1,10 +1,10 @@
 {
-    "version": "34.6.3",
+    "version": "34.7.0",
     "description": "Versatile typeface for code, from code.",
     "homepage": "https://github.com/be5invis/Iosevka",
     "license": "OFL-1.1",
-    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.6.3/SuperTTC-SGr-IosevkaSS06-34.6.3.zip",
-    "hash": "6ae39d6844084ad80cc773478f3009ade8096110920d3eb1fba2131b7ed8bfa5",
+    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.7.0/SuperTTC-SGr-IosevkaSS06-34.7.0.zip",
+    "hash": "63133baca4e8378e892c31290bb9a7822c7b195316113028207a7c007190fa90",
     "installer": {
         "script": [
             "$filter = 'SGr-IosevkaSS06-.*\\.ttc$'",
