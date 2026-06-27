@@ -1,10 +1,10 @@
 {
-    "version": "34.6.3",
+    "version": "34.7.0",
     "description": "Versatile typeface for code, from code.",
     "homepage": "https://github.com/be5invis/Iosevka",
     "license": "OFL-1.1",
-    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.6.3/SuperTTC-SGr-IosevkaFixedCurly-34.6.3.zip",
-    "hash": "ce6d748974f88f3a2f89a4102dfa8c1ccf9a7c46bc4cbdc6e4eb4cfaab700a4f",
+    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.7.0/SuperTTC-SGr-IosevkaFixedCurly-34.7.0.zip",
+    "hash": "14dd3580f8c4b45fba21f09c5066045b040a0d72fadce1b0cc138d6021517c6a",
     "installer": {
         "script": [
             "$filter = 'SGr-IosevkaFixedCurly-.*\\.ttc$'",
