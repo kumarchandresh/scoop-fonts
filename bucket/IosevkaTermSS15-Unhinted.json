@@ -1,10 +1,10 @@
 {
-    "version": "34.6.3",
+    "version": "34.7.0",
     "description": "Versatile typeface for code, from code.",
     "homepage": "https://github.com/be5invis/Iosevka",
     "license": "OFL-1.1",
-    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.6.3/PkgTTF-Unhinted-IosevkaTermSS15-34.6.3.zip",
-    "hash": "e7cd6a6a0fc14c447d1d20a2af77bffbe0444a1d8d9fb387db673bc6f7ebd66b",
+    "url": "https://github.com/be5invis/Iosevka/releases/download/v34.7.0/PkgTTF-Unhinted-IosevkaTermSS15-34.7.0.zip",
+    "hash": "0b67e44eead8aecbfd9c413b8cd725c6eeb78f16802c9d5383014ae521175b3c",
     "installer": {
         "script": [
             "$filter = 'IosevkaTermSS15-.*\\.ttf$'",
