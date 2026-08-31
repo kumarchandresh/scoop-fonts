@@ -8,6 +8,10 @@ $fontDir = if ($global) { "${env:WINDIR}\Fonts" } else { "${env:LOCALAPPDATA}\Mi
 $regDrive = if ($global) { 'HKLM:' } else { 'HKCU:' }
 $regKey = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
 
+if (-not (Test-Path -LiteralPath $fontDir -PathType Container)) {
+    New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
+}
+
 $files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -match $filter }
 if ($files.Count -eq 0) {
     Write-Error 'Failed to find fonts to install. Please recheck the filter.' -ErrorAction Stop
