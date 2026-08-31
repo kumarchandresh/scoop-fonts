@@ -284,7 +284,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
                 "script" = @('$filter = ' + "'$($var.Filter)'")
             }
             "checkver"    = [ordered]@{
-                "url"      = $releaseUrl
+                "github"   = $releaseUrl
                 "jsonpath" = '$[*].assets[*].browser_download_url'
                 "regex"    = $var.Regex
             }
