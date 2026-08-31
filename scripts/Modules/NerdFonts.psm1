@@ -23,6 +23,10 @@ function Get-NerdFonts {
                 @{ patchedName = 'BigBlueTerm437'; variants = @('', 'Mono', 'Propo') },
                 @{ patchedName = 'BigBlueTermPlus'; variants = @('', 'Mono', 'Propo') }
             )
+        } elseif ($folderName -eq 'D2CodingLigature') {
+            @(
+                @{ patchedName = 'D2KodingLigature'; variants = @('', 'Mono', 'Propo') }
+            )
         } elseif ($folderName -eq 'Gohu') {
             @(
                 @{ patchedName = 'GohuFont11'; variants = @('', 'Mono', 'Propo') },
