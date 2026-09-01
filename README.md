@@ -16,3 +16,5 @@ scoop install fonts/<manifestname>
 ## How do I contribute new manifests?
 
 Create a GitHub issue or a Pull request to contribute.
+
+[Learn more](https://github.com/kumarchandresh/scoop-fonts/blob/main/scripts/Init-Manifest.ps1)
