@@ -18,6 +18,15 @@ function Get-NerdFonts {
             @(
                 @{patchedName = $font.patchedName; variants = @('', 'Propo') }
             )
+        } elseif ($folderName -eq 'BigBlueTerminal') {
+            @(
+                @{ patchedName = 'BigBlueTerm437'; variants = @('', 'Mono', 'Propo') },
+                @{ patchedName = 'BigBlueTermPlus'; variants = @('', 'Mono', 'Propo') }
+            )
+        } elseif ($folderName -eq 'D2CodingLigature') {
+            @(
+                @{ patchedName = 'D2KodingLigature'; variants = @('', 'Mono', 'Propo') }
+            )
         } elseif ($folderName -eq 'Gohu') {
             @(
                 @{ patchedName = 'GohuFont11'; variants = @('', 'Mono', 'Propo') },

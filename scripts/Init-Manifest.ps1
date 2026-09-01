@@ -13,6 +13,8 @@ param (
 
 Set-StrictMode -Version 1
 
+$ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
+
 $allFonts = [ordered]@{}
 
 Import-Module -Force "$PSScriptRoot\Modules\0xType.psm1"
@@ -43,7 +45,7 @@ Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
     if (-not $allFonts.Contains($_.BaseName)) {
         if ($Clean) {
             Write-Host "unmanaged manifest deprecated: $($_.BaseName)" -ForegroundColor Yellow
-            Copy-Item -Path $_.FullName -Destination "$PSScriptRoot\deprecated\$($_.BaseName).json"
+            Copy-Item -Path $_.FullName -Destination "$ROOT_DIR\deprecated\$($_.BaseName).json"
         } else {
             Write-Host "unmanaged manifest detected: $($_.BaseName)" -ForegroundColor DarkGray
         }
@@ -284,7 +286,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
                 "script" = @('$filter = ' + "'$($var.Filter)'")
             }
             "checkver"    = [ordered]@{
-                "url"      = $releaseUrl
+                "github"   = $releaseUrl
                 "jsonpath" = '$[*].assets[*].browser_download_url'
                 "regex"    = $var.Regex
             }
