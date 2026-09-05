@@ -174,7 +174,12 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         }
         Write-Host "license: $license"
 
-        $releaseUrl = "https://api.github.com/repos/$($var.Repo)/releases"
+        $useLatest = $var.ContainsKey('Latest') -and $var.Latest
+        $releaseUrl = if ($useLatest) {
+            "https://api.github.com/repos/$($var.Repo)/releases/latest"
+        } else {
+            "https://api.github.com/repos/$($var.Repo)/releases"
+        }
         $urlKey = $releaseUrl.ToLower()
 
         if ($releases.ContainsKey($urlKey)) {
@@ -189,13 +194,24 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
             $releases[$urlKey] = $releaseInfo
         }
 
-        $downloadUrl = $releaseInfo | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match $var.Regex } | Select-Object -First 1
+        $downloadUrl = if ($useLatest) {
+            @($releaseInfo.assets.browser_download_url) |
+            Where-Object { $_ -match $var.Regex } |
+            Select-Object -First 1
+        } else {
+            $releaseInfo |
+            ForEach-Object { $_.assets.browser_download_url } |
+            Where-Object { $_ -match $var.Regex } |
+            Select-Object -First 1
+        }
 
         if ($null -eq $downloadUrl) {
             Write-Host "Failed to find download url matching regex '$($var.Regex)' in repository $($var.Repo)" -ForegroundColor Red
             continue
         }
         Write-Host "url: $downloadUrl"
+
+        $jsonPath = if ($useLatest) { '$.assets[*].browser_download_url' } else { '$[*].assets[*].browser_download_url' }
 
         $regex = [regex]::new($var.Regex)
         $match = $regex.Match($downloadUrl)
@@ -290,7 +306,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
             }
             "checkver"    = [ordered]@{
                 "github"   = $releaseUrl
-                "jsonpath" = '$[*].assets[*].browser_download_url'
+                "jsonpath" = $jsonPath
                 "regex"    = $var.Regex
             }
             "autoupdate"  = [ordered]@{

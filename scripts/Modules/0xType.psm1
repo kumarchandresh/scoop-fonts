@@ -6,9 +6,9 @@ function Get-0xTypeFonts {
         '0xProtoNL-OTF'    = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.otf$'; Dir = 'No-Ligatures' }
         'ZxProto'          = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.ttf' ; Dir = 'ZxProto' }
         'ZxProto-OTF'      = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.otf' ; Dir = 'ZxProto' }
-        'ZxGamut'          = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = 'ZxGamut-.*\.ttf$'; Dir = 'static' }
-        'ZxGamut-OTF'      = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = 'ZxGamut-.*\.otf$'; Dir = 'static' }
-        'ZxGamut-Variable' = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.ttf$'; Dir = 'variable' }
+        'ZxGamut'          = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = 'ZxGamut-.*\.ttf$'; Dir = 'static'; Latest = $true }
+        'ZxGamut-OTF'      = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = 'ZxGamut-.*\.otf$'; Dir = 'static'; Latest = $true }
+        'ZxGamut-Variable' = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.ttf$'; Dir = 'variable'; Latest = $true }
     }
     return $manifests
 }
