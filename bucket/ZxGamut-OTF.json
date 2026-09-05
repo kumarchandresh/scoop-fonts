@@ -1,10 +1,10 @@
 {
-    "version": "1.001",
+    "version": "1.002",
     "description": "​A seamless gamut of engineered geometric expression.",
     "homepage": "https://github.com/0xType/Gamut",
     "license": "OFL-1.1",
-    "url": "https://github.com/0xType/Gamut/releases/download/v1.001/ZxGamut_1_001.zip",
-    "hash": "90d73b2ae1894cb5842992c79a2c36bc93342461d44f0e9853a514ad10d6fd7a",
+    "url": "https://github.com/0xType/Gamut/releases/download/1.002/ZxGamut_1_002.zip",
+    "hash": "3ef5ed2a8b651a6b780353a90832270fd305316c15a922cc57c8c9f8c20d6800",
     "extract_dir": "static",
     "installer": {
         "script": [
@@ -62,14 +62,16 @@
             "                $regValueName = \"$fontFamilyName $fontFaceName (TrueType)\"",
             "            }",
             "        }",
+            "    } catch {",
+            "        Write-Warning \"Failed to retrieve font metadata from $($file.Name): $($_.Exception.Message)\"",
             "    } finally {",
             "        $glyphTypeface = $null",
             "        [System.GC]::Collect()",
             "        [System.GC]::WaitForPendingFinalizers()",
             "    }",
-            "    if ($null -eq $regValueName) {",
-            "        Write-Warning \"Could not determine font family name from metadata; using filename instead.\"",
-            "        $regValueName = $file.BaseName -replace '[-_]+', ' '",
+            "    if ([string]::IsNullOrWhiteSpace($regValueName)) {",
+            "        Write-Output \"Could not determine font family name from metadata; using filename instead.\"",
+            "        $regValueName = $file.Name",
             "    }",
             "    $font = [PSCustomObject]@{",
             "        File     = $file",
@@ -155,10 +157,16 @@
             "                $regValueName = \"$fontFamilyName $fontFaceName (TrueType)\"",
             "            }",
             "        }",
+            "    } catch {",
+            "        Write-Warning \"Failed to retrieve font metadata from $($file.Name): $($_.Exception.Message)\"",
             "    } finally {",
             "        $glyphTypeface = $null",
             "        [System.GC]::Collect()",
             "        [System.GC]::WaitForPendingFinalizers()",
+            "    }",
+            "    if ([string]::IsNullOrWhiteSpace($regValueName)) {",
+            "        Write-Output \"Could not determine font family name from metadata; using filename instead.\"",
+            "        $regValueName = $file.Name",
             "    }",
             "    $font = [PSCustomObject]@{",
             "        File     = $file",
@@ -192,11 +200,11 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/0xType/Gamut/releases",
-        "jsonpath": "$[*].assets[*].browser_download_url",
+        "github": "https://api.github.com/repos/0xType/Gamut/releases/latest",
+        "jsonpath": "$.assets[*].browser_download_url",
         "regex": "/v?([\\d.]+)/.*\\.zip"
     },
     "autoupdate": {
-        "url": "https://github.com/0xType/Gamut/releases/download/v$version/ZxGamut_$underscoreVersion.zip"
+        "url": "https://github.com/0xType/Gamut/releases/download/$version/ZxGamut_$underscoreVersion.zip"
     }
 }
