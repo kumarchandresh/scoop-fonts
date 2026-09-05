@@ -47,6 +47,9 @@ Import-Module -Force "$PSScriptRoot\Modules\JetbrainsMono.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
 (Get-MapleMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
+Import-Module -Force "$PSScriptRoot\Modules\MonaSans.psm1"
+(Get-MonaSansFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
 Import-Module -Force "$PSScriptRoot\Modules\Monaspace.psm1"
 (Get-MonaspaceFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
