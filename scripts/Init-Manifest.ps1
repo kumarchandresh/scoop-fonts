@@ -32,6 +32,9 @@ Import-Module -Force "$PSScriptRoot\Modules\GoogleSansCode.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\IBMPlex.psm1"
 (Get-IBMPlexFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
+Import-Module -Force "$PSScriptRoot\Modules\IntelOneMono.psm1"
+(Get-IntelOneMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
 Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
 (Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
