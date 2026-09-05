@@ -26,6 +26,9 @@ Import-Module -Force "$PSScriptRoot\Modules\CascadiaCode.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\FiraCode.psm1"
 (Get-FiraCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
+Import-Module -Force "$PSScriptRoot\Modules\Geist.psm1"
+(Get-GeistFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+
 Import-Module -Force "$PSScriptRoot\Modules\GoogleSansCode.psm1"
 (Get-GoogleSansCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
 
