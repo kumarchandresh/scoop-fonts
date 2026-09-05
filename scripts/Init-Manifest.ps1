@@ -186,9 +186,6 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
                 Write-Host "Failed to retrieve release info for repository $($var.Repo)" -ForegroundColor Red
                 continue
             }
-            $releaseInfo = $releaseInfo | Sort-Object {
-                if ($_.published_at) { [datetime]$_.published_at } elseif ($_.created_at) { [datetime]$_.created_at } else { [datetime]::MinValue }
-            } -Descending
             $releases[$urlKey] = $releaseInfo
         }
 
