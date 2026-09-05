@@ -57,15 +57,17 @@ foreach ($file in $files) {
                 $regValueName = "$fontFamilyName $fontFaceName (TrueType)"
             }
         }
+    } catch {
+        Write-Warning "Failed to retrieve font metadata from $($file.Name): $($_.Exception.Message)"
     } finally {
         # Force garbage collection to ensure any remaining handles are released
         $glyphTypeface = $null
         [System.GC]::Collect()
         [System.GC]::WaitForPendingFinalizers()
     }
-    if ($null -eq $regValueName) {
-        Write-Warning "Could not determine font family name from metadata; using filename instead."
-        $regValueName = $file.BaseName -replace '[-_]+', ' '
+    if ([string]::IsNullOrWhiteSpace($regValueName)) {
+        Write-Output "Could not determine font family name from metadata; using filename instead."
+        $regValueName = $file.Name
     }
     # Write-Debug "regValueName: $regValueName"
     $font = [PSCustomObject]@{
