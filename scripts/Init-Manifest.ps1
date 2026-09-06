@@ -17,6 +17,7 @@ $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 
 Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\ManifestSources.psm1"
 $allFonts = Get-AllFontDeclarations
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
@@ -49,27 +50,7 @@ $cache = @{}
 $hashes = @{}
 $releases = @{}
 
-$lastApiCall = $null
-$apiCallInterval = 500 # milliseconds
-
-function Invoke-RateLimitedRestMethod {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Uri,
-        [Parameter(Mandatory)]
-        [hashtable]$Headers
-    )
-
-    if ($script:lastApiCall) {
-        $elapsed = (Get-Date) - $script:lastApiCall
-        if ($elapsed.TotalMilliseconds -lt $script:apiCallInterval) {
-            Start-Sleep -Milliseconds ($script:apiCallInterval - $elapsed.TotalMilliseconds)
-        }
-    }
-
-    $script:lastApiCall = Get-Date
-    return Invoke-RestMethod -Uri $Uri -Headers $Headers
-}
+$rateLimitState = @{ LastApiCall = $null; ApiCallInterval = 500 }
 
 $formatjson = "$PSScriptRoot\..\bin\formatjson.ps1"
 
@@ -98,30 +79,12 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         Write-Host "manifest: $($var.Name).json" -ForegroundColor Green
         Write-Host "homepage: https://github.com/$($var.Repo)"
 
-        $headers = @{
-            "User-Agent" = "PowerShell"
-            "Accept"     = "application/vnd.github.v3+json"
-        }
-        if ($env:GITHUB_TOKEN) {
-            $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
-        }
+        $headers = New-GitHubHeaders
 
         $originRepo = if ( $null -eq $var.Origin ) { $var.Repo } else { $var.Origin }
-        $cacheKey = $originRepo.ToLower()
-
-        if ($cache.ContainsKey($cacheKey)) {
-            $repo = $cache[$cacheKey].Repo
-            $license = $cache[$cacheKey].License
-        } else {
-            $repo = Invoke-RateLimitedRestMethod -Uri "https://api.github.com/repos/$($originRepo)" -Headers $headers
-            $license = Invoke-RateLimitedRestMethod -Uri "https://api.github.com/repos/$($originRepo)/license" -Headers $headers |
-            Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
-            Select-Object -ExpandProperty License
-            if ('NOASSERTION' -eq $license) {
-                $license = $var.License
-            }
-            $cache[$cacheKey] = @{Repo = $repo; License = $license }
-        }
+        $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -RateLimitState $rateLimitState -FallbackLicense $var.License
+        $repo = $metadata.Repo
+        $license = $metadata.License
         if ($var.ContainsKey('License')) {
             $license = $var.License
         }
@@ -141,43 +104,22 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         Write-Host "license: $license"
 
         $useLatest = $var.ContainsKey('Latest') -and $var.Latest
-        $releaseUrl = if ($useLatest) {
-            "https://api.github.com/repos/$($var.Repo)/releases/latest"
-        } else {
-            "https://api.github.com/repos/$($var.Repo)/releases"
+        $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases -RateLimitState $rateLimitState
+        if ($null -eq $release) {
+            Write-Host "Failed to retrieve release info for repository $($var.Repo)" -ForegroundColor Red
+            continue
         }
-        $urlKey = $releaseUrl.ToLower()
+        $releaseInfo = $release.Info
+        $releaseUrl = $release.Url
+        $jsonPath = $release.JsonPath
 
-        if ($releases.ContainsKey($urlKey)) {
-            $releaseInfo = $releases[$urlKey]
-        } else {
-            $releaseInfo = Invoke-RateLimitedRestMethod -Uri $releaseUrl -Headers $headers
-
-            if ($null -eq $releaseInfo) {
-                Write-Host "Failed to retrieve release info for repository $($var.Repo)" -ForegroundColor Red
-                continue
-            }
-            $releases[$urlKey] = $releaseInfo
-        }
-
-        $downloadUrl = if ($useLatest) {
-            @($releaseInfo.assets.browser_download_url) |
-            Where-Object { $_ -match $var.Regex } |
-            Select-Object -First 1
-        } else {
-            $releaseInfo |
-            ForEach-Object { $_.assets.browser_download_url } |
-            Where-Object { $_ -match $var.Regex } |
-            Select-Object -First 1
-        }
+        $downloadUrl = Find-GitHubDownloadUrl -ReleaseInfo $releaseInfo -Latest $useLatest -Regex $var.Regex
 
         if ($null -eq $downloadUrl) {
             Write-Host "Failed to find download url matching regex '$($var.Regex)' in repository $($var.Repo)" -ForegroundColor Red
             continue
         }
         Write-Host "url: $downloadUrl"
-
-        $jsonPath = if ($useLatest) { '$.assets[*].browser_download_url' } else { '$[*].assets[*].browser_download_url' }
 
         $regex = [regex]::new($var.Regex)
         $match = $regex.Match($downloadUrl)
