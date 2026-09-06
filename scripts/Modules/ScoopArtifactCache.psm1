@@ -10,7 +10,7 @@ function Get-ScoopCacheDirectory {
     if ($env:SCOOP) {
         return Join-Path $env:SCOOP 'cache'
     }
-    return Join-Path (Join-Path $HOME 'scoop') 'cache'
+    return [System.IO.Path]::Combine($HOME, 'scoop', 'cache')
 }
 
 function Get-ScoopArtifactCachePath {

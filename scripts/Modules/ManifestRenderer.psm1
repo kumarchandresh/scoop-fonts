@@ -35,10 +35,10 @@ function New-ScoopManifest {
         "hash"        = $Hash
         "extract_dir" = $Declaration.Dir
         "installer"   = @{
-            "script" = @('$filter = ' + "'$($Declaration.Filter)'")
+            "script" = @("`$filter = '$($Declaration.Filter)'")
         }
         "uninstaller" = @{
-            "script" = @('$filter = ' + "'$($Declaration.Filter)'")
+            "script" = @("`$filter = '$($Declaration.Filter)'")
         }
         "checkver"    = [ordered]@{
             "url"      = $ReleaseUrl
@@ -62,13 +62,8 @@ function New-ScoopManifest {
         }
     }
 
-    foreach ($line in $InstallerLines) {
-        $manifest.installer.script += $line
-    }
-
-    foreach ($line in $UninstallerLines) {
-        $manifest.uninstaller.script += $line
-    }
+    $manifest.installer.script += $InstallerLines
+    $manifest.uninstaller.script += $UninstallerLines
 
     return $manifest
 }

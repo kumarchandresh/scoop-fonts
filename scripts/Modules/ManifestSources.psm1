@@ -52,7 +52,7 @@ function Get-ManifestArtifactPath {
     } else {
         Join-Path $env:TEMP 'scoop-fonts'
     }
-    return Join-Path (Join-Path (Join-Path (Join-Path $root $owner) $repo) (ConvertTo-ManifestCachePathPart $Version)) $fileName
+    return [System.IO.Path]::Combine($root, $owner, $repo, (ConvertTo-ManifestCachePathPart $Version), $fileName)
 }
 
 function Invoke-GitHubRateLimitedRestMethod {
@@ -96,9 +96,8 @@ function Get-GitHubRepositoryMetadata {
     }
 
     $repo = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository" -Headers $Headers -RateLimitState $RateLimitState
-    $license = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository/license" -Headers $Headers -RateLimitState $RateLimitState |
-        Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
-        Select-Object -ExpandProperty License
+    $licenseData = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository/license" -Headers $Headers -RateLimitState $RateLimitState
+    $license = $licenseData.license.spdx_id
     if ('NOASSERTION' -eq $license) {
         $license = $FallbackLicense
     }

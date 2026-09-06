@@ -23,29 +23,8 @@ $allFonts = Get-AllFontDeclarations
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
-$installerContent = Get-Content "$PSScriptRoot\installer.ps1"
-$installer = @()
-foreach ($line in $installerContent) {
-    if ([string]::IsNullOrEmpty($line)) {
-        continue
-    }
-    if ($line -match '^\s*#') {
-        continue
-    }
-    $installer += $line
-}
-
-$uninstallerContent = Get-Content "$PSScriptRoot\uninstaller.ps1"
-$uninstaller = @()
-foreach ($line in $uninstallerContent) {
-    if ([string]::IsNullOrEmpty($line)) {
-        continue
-    }
-    if ($line -match '^\s*#') {
-        continue
-    }
-    $uninstaller += $line
-}
+$installer = @(Get-Content "$PSScriptRoot\installer.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
+$uninstaller = @(Get-Content "$PSScriptRoot\uninstaller.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
 
 $cache = @{}
 $hashes = @{}
