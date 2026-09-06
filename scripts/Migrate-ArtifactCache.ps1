@@ -26,7 +26,7 @@ foreach ($file in Get-ChildItem $BucketDirectory -Filter '*.json') {
     if (-not $entries.ContainsKey($source)) {
         $entries[$source] = @()
     }
-    $entries[$source] += [pscustomobject]@{
+    $entries[$source] += [PSCustomObject]@{
         Manifest = $file.Name
         Url      = $manifest.url
         Version  = [string]$manifest.version
@@ -49,8 +49,8 @@ foreach ($entry in $entries.GetEnumerator()) {
     }
 
     $destinations = @($manifests | ForEach-Object {
-        Get-ManifestArtifactPath -DownloadUrl $_.Url -Version $_.Version
-    } | Sort-Object -Unique)
+            Get-ManifestArtifactPath -DownloadUrl $_.Url -Version $_.Version
+        } | Sort-Object -Unique)
     foreach ($destination in $destinations) {
         New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
         Copy-Item -LiteralPath $source -Destination $destination -Force

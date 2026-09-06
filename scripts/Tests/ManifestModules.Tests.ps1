@@ -14,10 +14,10 @@ Import-Module (Join-Path $modulesDir 'CascadiaCode.psm1') -Force
 
 Describe 'Manifest source helpers' {
     It 'selects matching assets for latest and release-list responses' {
-        $release = [pscustomobject]@{
+        $release = [PSCustomObject]@{
             assets = @(
-                [pscustomobject]@{ browser_download_url = 'https://example.test/other.zip' }
-                [pscustomobject]@{ browser_download_url = 'https://example.test/font-1.2.zip' }
+                [PSCustomObject]@{ browser_download_url = 'https://example.test/other.zip' }
+                [PSCustomObject]@{ browser_download_url = 'https://example.test/font-1.2.zip' }
             )
         }
 
@@ -26,9 +26,9 @@ Describe 'Manifest source helpers' {
     }
 
     It 'returns null when no asset matches regex' {
-        $release = [pscustomobject]@{
+        $release = [PSCustomObject]@{
             assets = @(
-                [pscustomobject]@{ browser_download_url = 'https://example.test/other.zip' }
+                [PSCustomObject]@{ browser_download_url = 'https://example.test/other.zip' }
             )
         }
         Find-GitHubDownloadUrl -ReleaseInfo $release -Latest $true -Regex 'notfound-.*\.zip' | Should BeNullOrEmpty
@@ -104,7 +104,7 @@ Describe 'Manifest inventory' {
         $root = Join-Path $env:TEMP ('manifest-test-' + [guid]::NewGuid())
         $bucket = Join-Path $root 'bucket'
         $deprecated = Join-Path $root 'deprecated'
-        New-Item -ItemType Directory -Path $bucket,$deprecated | Out-Null
+        New-Item -ItemType Directory -Path $bucket, $deprecated | Out-Null
         Set-Content -Path (Join-Path $bucket 'Unmanaged.json') -Value '{}'
         try {
             Test-ManifestInventory -Declarations ([ordered]@{ Managed = @{} }) -BucketDir $bucket -DeprecatedDir $deprecated -Clean
@@ -201,10 +201,11 @@ Describe 'Nerd Fonts catalog mapping' {
             New-Item -ItemType Directory -Force -Path $respDir | Out-Null
             $key = Get-ManifestCacheKey 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json'
             $fixture = @{ fonts = @(
-                @{ folderName = 'Arimo'; patchedName = 'Arimo'; licenseId = 'Apache-2.0'; description = 'Arimo NF' },
-                @{ folderName = 'NerdFontsSymbolsOnly'; patchedName = 'NerdFontsSymbolsOnly'; licenseId = 'MIT'; description = 'Symbols NF' },
-                @{ folderName = 'Hack'; patchedName = 'Hack'; licenseId = 'MIT'; description = 'Hack NF' }
-            ) }
+                    @{ folderName = 'Arimo'; patchedName = 'Arimo'; licenseId = 'Apache-2.0'; description = 'Arimo NF' },
+                    @{ folderName = 'NerdFontsSymbolsOnly'; patchedName = 'NerdFontsSymbolsOnly'; licenseId = 'MIT'; description = 'Symbols NF' },
+                    @{ folderName = 'Hack'; patchedName = 'Hack'; licenseId = 'MIT'; description = 'Hack NF' }
+                )
+            }
             ConvertTo-Json $fixture -Depth 10 | Out-File -FilePath (Join-Path $respDir "$key.json") -Encoding utf8
 
             $fonts = Get-NerdFonts -CacheDirectory $root -Offline

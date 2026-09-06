@@ -149,8 +149,8 @@ function Get-GitHubRepositoryMetadata {
 
     $repo = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository" -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline
     $license = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository/license" -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline |
-    Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
-    Select-Object -ExpandProperty License
+        Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
+        Select-Object -ExpandProperty License
     if ('NOASSERTION' -eq $license) {
         $license = $FallbackLicense
     }
@@ -213,14 +213,14 @@ function Find-GitHubDownloadUrl {
 
     if ($Latest) {
         return @($ReleaseInfo.assets.browser_download_url) |
-        Where-Object { $_ -match $Regex } |
-        Select-Object -First 1
+            Where-Object { $_ -match $Regex } |
+            Select-Object -First 1
     }
 
     return $ReleaseInfo |
-    ForEach-Object { $_.assets.browser_download_url } |
-    Where-Object { $_ -match $Regex } |
-    Select-Object -First 1
+        ForEach-Object { $_.assets.browser_download_url } |
+        Where-Object { $_ -match $Regex } |
+        Select-Object -First 1
 }
 
 function Get-NerdFontsCatalog {
