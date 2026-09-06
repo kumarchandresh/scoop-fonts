@@ -45,7 +45,11 @@ Describe 'Generated font manifest installation' {
             throw "Manifest file not found: $manifestPath"
         }
         $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
-        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''') { $matches[1] } else { "^$ManifestName" }
+        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''' -and $matches[1] -ne '\.[ot]tf$') {
+            $matches[1]
+        } else {
+            "^$($ManifestName -replace '-(OTF|TTF|Variable|unhinted).*$', '')"
+        }
 
         $before = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex })
         if ($before.Count -ne 0) {
@@ -80,13 +84,17 @@ Describe 'Installer failure handling' {
     }
 
     It 'aborts installation and leaves no fonts when filter matches zero files' -Skip:(-not $runIntegration) {
-        $sampleName = if ($targetManifests.Count -gt 0) { $targetManifests[0] } else { 'CascadiaCodeNF' }
+        $sampleName = if ($targetManifests.Count -gt 0) { $targetManifests[0] } else { 'CascadiaCode' }
         $sampleManifestPath = Join-Path $bucketDir "$sampleName.json"
         if (-not (Test-Path $sampleManifestPath)) {
             throw "Manifest file not found: $sampleManifestPath"
         }
         $manifest = Get-Content $sampleManifestPath -Raw | ConvertFrom-Json
-        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''') { $matches[1] } else { "^$sampleName" }
+        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''' -and $matches[1] -ne '\.[ot]tf$') {
+            $matches[1]
+        } else {
+            "^$($sampleName -replace '-(OTF|TTF|Variable|unhinted).*$', '')"
+        }
 
         $testAppName = "TestFilterMismatch-$sampleName"
         $tempManifestPath = Join-Path $env:TEMP "$testAppName.json"
