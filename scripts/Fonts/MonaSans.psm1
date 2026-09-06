@@ -1,4 +1,4 @@
-function Get-MonaSansFonts {
+function Get-MonaSansResources {
     $manifests = [ordered]@{
         'MonaSans'                         = @{Repo = 'github/mona-sans'; Regex = '/mona-sans-static-v?([\d.]+)+.zip'; Dir = 'fonts\static\ttf'; Filter = "MonaSans-.*.ttf$" }
         'MonaSansCondensed'                = @{Repo = 'github/mona-sans'; Regex = '/mona-sans-static-v?([\d.]+)+.zip'; Dir = 'fonts\static\ttf'; Filter = "MonaSansCondensed-.*.ttf$" }

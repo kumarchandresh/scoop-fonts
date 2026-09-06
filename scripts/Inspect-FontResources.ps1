@@ -35,13 +35,7 @@ $results = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 foreach ($m in $modules) {
     Import-Module -Force $m.FullName
-    $fnName = "Get-$($m.BaseName)Fonts"
-    if (-not (Get-Command -Name $fnName -ErrorAction SilentlyContinue)) {
-        $fnName = "Get-$($m.BaseName)Resources"
-    }
-    if (-not (Get-Command -Name $fnName -ErrorAction SilentlyContinue)) {
-        $fnName = "Get-$($m.BaseName)"
-    }
+    $fnName = "Get-$($m.BaseName)Resources"
     if (-not (Get-Command -Name $fnName -ErrorAction SilentlyContinue)) {
         Write-Warning "No declaration function found in $($m.Name)"
         continue

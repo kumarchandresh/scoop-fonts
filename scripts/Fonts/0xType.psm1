@@ -1,4 +1,4 @@
-function Get-0xTypeFonts {
+function Get-0xTypeResources {
     $manifests = [ordered]@{
         '0xProto'          = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = "^0xProto-\w+\.ttf$" }
         '0xProto-OTF'      = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = "^0xProto-\w+\.otf$" }

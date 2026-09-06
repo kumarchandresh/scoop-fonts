@@ -1,4 +1,4 @@
-function Get-NerdFonts {
+function Get-NerdFontsResources {
     param(
         [Parameter()]
         $Catalog
@@ -148,18 +148,5 @@ function Get-NerdFonts {
         }
     }
 
-    # $manifests.GetEnumerator() | ForEach-Object {
-    #     [PSCustomObject]@{
-    #         Name    = $_.Value.Name
-    #         Repo    = $_.Value.Repo
-    #         Regex   = $_.Value.Regex
-    #         Filter  = $_.Value.Filter
-    #         License = $_.Value.License
-    #         Desc    = $_.Value.Desc
-    #     }
-    # }
-    # exit 0
-
     return $manifests
-
 }

@@ -15,10 +15,7 @@ function Get-AllFontDeclarations {
 
     foreach ($module in $fontModules) {
         Import-Module -Force $module.FullName
-        $fnName = "Get-$($module.BaseName)Fonts"
-        if (-not (Get-Command -Name $fnName -ErrorAction SilentlyContinue)) {
-            $fnName = "Get-$($module.BaseName)"
-        }
+        $fnName = "Get-$($module.BaseName)Resources"
         if (-not (Get-Command -Name $fnName -ErrorAction SilentlyContinue)) {
             Write-Warning "Could not find font declaration function '$fnName' in $($module.Name)"
             continue

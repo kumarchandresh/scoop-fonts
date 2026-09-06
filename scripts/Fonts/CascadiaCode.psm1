@@ -1,4 +1,4 @@
-function Get-CascadiaCodeFonts {
+function Get-CascadiaCodeResources {
     $manifests = [ordered]@{
         'CascadiaCode'       = @{Repo = 'microsoft/cascadia-code'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = "CascadiaCode-.*.ttf$"  ; License = 'OFL-1.1-RFN'; Dir = 'ttf\static' }
         'CascadiaMono'       = @{Repo = 'microsoft/cascadia-code'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = "CascadiaMono-.*.ttf$"  ; License = 'OFL-1.1-RFN'; Dir = 'ttf\static' }

@@ -1,4 +1,4 @@
-function Get-IBMPlexFonts {
+function Get-IBMPlexResources {
     $plexFonts = @(
         @{ fontName = 'IBMPlexMono'; fileName = 'ibm-plex-mono'; dir = 'ibm-plex-mono\fonts\complete\ttf'; filter = 'IBMPlexMono-.*\.ttf$' },
         @{ fontName = 'IBMPlexMono-OTF'; fileName = 'ibm-plex-mono'; dir = 'ibm-plex-mono\fonts\complete\otf'; filter = 'IBMPlexMono-.*\.otf$' },

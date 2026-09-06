@@ -1,4 +1,4 @@
-function Get-MapleMonoFonts {
+function Get-MapleMonoResources {
     $manifests = [ordered]@{}
     $fontFamilies = @('MapleMono', 'MapleMonoNL', 'MapleMonoNormal', 'MapleMonoNormalNL')
     $packages = @('CN-unhinted', 'CN', 'NF-CN-unhinted', 'NF-CN', 'NF-unhinted', 'NF', 'OTF', 'TTF-AutoHint', 'TTF', 'Variable')

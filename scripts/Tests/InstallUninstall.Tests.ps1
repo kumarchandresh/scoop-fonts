@@ -17,10 +17,7 @@ if ($env:FONT_INTEGRATION_MODULE) {
     }
     foreach ($module in $matchedModules) {
         Import-Module $module.FullName -Force
-        $fn = "Get-$($module.BaseName)Fonts"
-        if (-not (Get-Command -Name $fn -ErrorAction SilentlyContinue)) {
-            $fn = "Get-$($module.BaseName)"
-        }
+        $fn = "Get-$($module.BaseName)Resources"
         $declarations = & $fn
         $targetManifests += @($declarations.Keys)
     }

@@ -1,4 +1,4 @@
-function Get-MonaspaceFonts {
+function Get-MonaspaceResources {
     $config = @{
         static    = @{ dir = 'Static Fonts'  ; suffix = '' }
         variable  = @{ dir = 'Variable Fonts'; suffix = 'Var' }

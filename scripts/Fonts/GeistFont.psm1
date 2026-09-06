@@ -1,4 +1,4 @@
-function Get-GeistFonts {
+function Get-GeistFontResources {
     $manifests = [ordered]@{
         'Geist'               = @{Repo = 'vercel/geist-font'; Regex = '/geist-font-v?([\d.]+)+.zip'; Filter = "\.[ot]tf$"; Dir = 'geist-font/Geist/ttf' }
         'GeistMono'           = @{Repo = 'vercel/geist-font'; Regex = '/geist-font-v?([\d.]+)+.zip'; Filter = "\.[ot]tf$"; Dir = 'geist-font/GeistMono/ttf' }

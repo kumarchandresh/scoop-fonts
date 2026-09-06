@@ -191,7 +191,7 @@ Describe 'Nerd Fonts catalog mapping' {
             @{ folderName = 'Hack'; patchedName = 'Hack'; licenseId = 'MIT'; description = 'Hack NF' }
         )
 
-        $fonts = Get-NerdFonts -Catalog $fixture
+        $fonts = Get-NerdFontsResources -Catalog $fixture
 
         # Arimo has only '' and 'Propo' (no Mono)
         ($fonts.Contains('ArimoNerdFont')) | Should -Be $true
@@ -214,10 +214,10 @@ Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | ForEach-Object { Import-
 
 Describe 'Static source declarations' {
     It 'preserves the current migrated descriptor counts' {
-        (Get-IBMPlexFonts).Count | Should -Be 37
-        (Get-IosevkaFonts).Count | Should -Be 316
-        (Get-MapleMonoFonts).Count | Should -Be 40
-        (Get-MonaspaceFonts).Count | Should -Be 24
+        (Get-IBMPlexResources).Count | Should -Be 37
+        (Get-IosevkaResources).Count | Should -Be 316
+        (Get-MapleMonoResources).Count | Should -Be 40
+        (Get-MonaspaceResources).Count | Should -Be 24
     }
 
     It 'ensures all 484 static declarations map to an existing bucket manifest' {
@@ -226,10 +226,7 @@ Describe 'Static source declarations' {
         $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
         $total = 0
         foreach ($m in $fontModules) {
-            $fn = "Get-$($m.BaseName)Fonts"
-            if (-not (Get-Command -Name $fn -ErrorAction SilentlyContinue)) {
-                $fn = "Get-$($m.BaseName)"
-            }
+            $fn = "Get-$($m.BaseName)Resources"
             $decls = & $fn
             $total += $decls.Count
             foreach ($k in $decls.Keys) {
@@ -242,7 +239,7 @@ Describe 'Static source declarations' {
 
 Describe 'Golden manifest equivalence' {
     It 'reconstructs JetBrainsMono manifest matching golden bucket file semantically' {
-        $decl = (Get-JetBrainsMonoFonts)['JetBrainsMono']
+        $decl = (Get-JetBrainsMonoResources)['JetBrainsMono']
         $version = '2.304'
         $description = 'JetBrains Mono – the free and open-source typeface for developers'
         $license = 'OFL-1.1'
@@ -275,7 +272,7 @@ Describe 'Golden manifest equivalence' {
     }
 
     It 'reconstructs CascadiaCode manifest matching golden bucket file semantically' {
-        $decl = (Get-CascadiaCodeFonts)['CascadiaCode']
+        $decl = (Get-CascadiaCodeResources)['CascadiaCode']
         $version = '2407.24'
         $description = 'This is a fun, new coding font that comes bundled with Windows Terminal, and is now the default font in Visual Studio as well.'
         $license = 'OFL-1.1-RFN'

@@ -1,4 +1,4 @@
-function Get-IosevkaFonts {
+function Get-IosevkaResources {
     $manifests = [ordered]@{}
     $fontNames = @(
         'Iosevka', 'IosevkaCurly', 'IosevkaCurlySlab', 'IosevkaAile', 'IosevkaEtoile',
