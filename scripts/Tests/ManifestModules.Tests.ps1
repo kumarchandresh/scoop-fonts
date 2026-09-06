@@ -306,6 +306,27 @@ Describe 'Golden manifest equivalence' {
     }
 }
 
+Describe 'Installer template script contract' {
+    It 'throws terminating error when filter matches zero files in target directory' {
+        $emptyTempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $emptyTempDir | Out-Null
+
+        try {
+            $installerScript = Get-Content (Join-Path $PSScriptRoot '..\installer.ps1') -Raw
+            $action = {
+                $dir = $emptyTempDir
+                $filter = '^NonExistentFont.*\.ttf$'
+                $global = $false
+                . ([ScriptBlock]::Create($installerScript))
+            }
+
+            $action | Should -Throw '*Failed to find fonts to install. Please recheck the filter.*'
+        } finally {
+            Remove-Item -Recurse -Force -LiteralPath $emptyTempDir -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Describe 'Generated bucket manifests' {
     It 'contains structurally valid Scoop manifests' {
         $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve

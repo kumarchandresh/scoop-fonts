@@ -69,3 +69,55 @@ Describe 'Generated font manifest installation' {
         @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex }).Count | Should -Be 0
     }
 }
+
+Describe 'Installer failure handling' {
+    BeforeAll {
+        $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
+        $fontDirectory = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+        $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
+        Import-Module (Join-Path $modulesDir 'ManifestSources.psm1') -Force
+        Import-Module (Join-Path $modulesDir 'ScoopArtifactCache.psm1') -Force
+    }
+
+    It 'aborts installation and leaves no fonts when filter matches zero files' -Skip:(-not $runIntegration) {
+        $sampleName = if ($targetManifests.Count -gt 0) { $targetManifests[0] } else { 'CascadiaCodeNF' }
+        $sampleManifestPath = Join-Path $bucketDir "$sampleName.json"
+        if (-not (Test-Path $sampleManifestPath)) {
+            throw "Manifest file not found: $sampleManifestPath"
+        }
+        $manifest = Get-Content $sampleManifestPath -Raw | ConvertFrom-Json
+        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''') { $matches[1] } else { "^$sampleName" }
+
+        $testAppName = "TestFilterMismatch-$sampleName"
+        $tempManifestPath = Join-Path $env:TEMP "$testAppName.json"
+
+        # Seed Scoop cache for the test app without network download
+        Initialize-ScoopArtifactCache -App $testAppName `
+            -Version $manifest.version `
+            -DownloadUrl $manifest.url `
+            -ExpectedHash $manifest.hash
+
+        # Tamper installer filter in memory to an impossible pattern
+        $manifest.installer.script[0] = '$filter = ''^NonExistentPattern.*\.ttf$'''
+        $manifest | ConvertTo-Json -Depth 10 | Set-Content $tempManifestPath -Encoding utf8
+
+        try {
+            $errorOutput = $null
+            try {
+                $output = & scoop install "$tempManifestPath" --no-update-scoop 2>&1
+            } catch {
+                $errorOutput = $_.ToString()
+            }
+            $allOutput = (@($output) + @($errorOutput)) -join "`n"
+
+            $allOutput | Should -Match 'Failed to find fonts to install\. Please recheck the filter\.'
+
+            $installedFonts = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex })
+            $installedFonts.Count | Should -Be 0
+        } finally {
+            & scoop uninstall "$testAppName" 2>&1 | Out-Null
+            Remove-Item $tempManifestPath -Force -ErrorAction SilentlyContinue
+            Remove-Item (Join-Path $env:USERPROFILE "scoop\cache\$testAppName*") -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
