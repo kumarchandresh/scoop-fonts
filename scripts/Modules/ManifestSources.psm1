@@ -233,7 +233,9 @@ function Get-ManifestArtifactHash {
             Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
         }
     } else {
-        Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
+        if (-not (Test-Path $outfile)) {
+            Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
+        }
     }
     if (-not (Test-Path $outfile)) {
         return $null
