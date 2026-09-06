@@ -173,23 +173,10 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
             $versionUrl = $versionUrl -replace [regex]::Escape($cleanVersion), '$cleanVersion'
         }
 
-        $cacheKey = $downloadUrl.toLower()
-        if ($hashes.ContainsKey($cacheKey)) {
-            $hash = $hashes[$cacheKey]
-        } else {
-            $name = $downloadUrl -split '/' | Select-Object -Last 1
-            $cleanVer = "$version" -replace '[^\w.-]', ''
-            $outfile = Join-Path ${env:TEMP} "v$cleanVer-$name"
-            if (-not (Test-Path $outfile)) {
-                Invoke-WebRequest -Uri $downloadUrl -Headers $headers -OutFile $outfile
-            } else {
-            }
-            if (-not (Test-Path $outfile)) {
-                Write-Host "Failed to download file from $downloadUrl" -ForegroundColor Red
-                continue
-            }
-            $hash = (Get-FileHash $outfile -Algorithm SHA256).Hash.ToLower()
-            $hashes[$cacheKey] = $hash
+        $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes
+        if ($null -eq $hash) {
+            Write-Host "Failed to download file from $downloadUrl" -ForegroundColor Red
+            continue
         }
 
         if ($null -eq $hash) {

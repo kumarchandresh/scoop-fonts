@@ -130,3 +130,35 @@ function Get-NerdFontsCatalog {
     }
     return $fonts
 }
+
+function Get-ManifestArtifactHash {
+    param(
+        [Parameter(Mandatory)]
+        [string]$DownloadUrl,
+        [Parameter(Mandatory)]
+        [string]$Version,
+        [Parameter(Mandatory)]
+        [hashtable]$Headers,
+        [Parameter(Mandatory)]
+        [hashtable]$Cache
+    )
+
+    $cacheKey = $DownloadUrl.ToLower()
+    if ($Cache.ContainsKey($cacheKey)) {
+        return $Cache[$cacheKey]
+    }
+
+    $name = $DownloadUrl -split '/' | Select-Object -Last 1
+    $cleanVer = "$Version" -replace '[^\w.-]', ''
+    $outfile = Join-Path ${env:TEMP} "v$cleanVer-$name"
+    if (-not (Test-Path $outfile)) {
+        Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
+    }
+    if (-not (Test-Path $outfile)) {
+        return $null
+    }
+
+    $hash = (Get-FileHash $outfile -Algorithm SHA256).Hash.ToLower()
+    $Cache[$cacheKey] = $hash
+    return $hash
+}
