@@ -120,3 +120,13 @@ function Find-GitHubDownloadUrl {
         Where-Object { $_ -match $Regex } |
         Select-Object -First 1
 }
+
+function Get-NerdFontsCatalog {
+    $headers = New-GitHubHeaders
+    Write-Host 'Fetching release data for Nerd Fonts...'
+    $fonts = (Invoke-RestMethod 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers).fonts
+    if ($fonts.Count -eq 0) {
+        Write-Warning 'Nerd Fonts: Failed to fetch release data from GitHub.'
+    }
+    return $fonts
+}
