@@ -2,6 +2,10 @@ $runIntegration = $env:RUN_FONT_INTEGRATION_TESTS -eq '1'
 $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
 $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
 $fontsDir = Join-Path $PSScriptRoot '..\Fonts' -Resolve
+$fontDirectory = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+
+Import-Module (Join-Path $modulesDir 'ManifestSources.psm1') -Force
+Import-Module (Join-Path $modulesDir 'ScoopArtifactCache.psm1') -Force
 
 $targetManifests = @()
 if ($env:FONT_INTEGRATION_MODULE) {
@@ -31,13 +35,6 @@ if ($env:FONT_INTEGRATION_MODULE) {
 }
 
 Describe 'Generated font manifest installation' {
-    BeforeAll {
-        $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
-        $fontDirectory = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
-        $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
-        Import-Module (Join-Path $modulesDir 'ManifestSources.psm1') -Force
-        Import-Module (Join-Path $modulesDir 'ScoopArtifactCache.psm1') -Force
-    }
 
     $testCases = @($targetManifests | ForEach-Object { @{ ManifestName = $_ } })
     It 'installs and uninstalls <ManifestName>' -TestCases $testCases -Skip:(-not $runIntegration) {
@@ -80,13 +77,6 @@ Describe 'Generated font manifest installation' {
 }
 
 Describe 'Installer failure handling' {
-    BeforeAll {
-        $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
-        $fontDirectory = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
-        $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
-        Import-Module (Join-Path $modulesDir 'ManifestSources.psm1') -Force
-        Import-Module (Join-Path $modulesDir 'ScoopArtifactCache.psm1') -Force
-    }
 
     It 'aborts installation and leaves no fonts when filter matches zero files' -Skip:(-not $runIntegration) {
         $sampleName = if ($targetManifests.Count -gt 0) { $targetManifests[0] } else { 'CascadiaCode' }
