@@ -18,6 +18,7 @@ $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestSources.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\ManifestRenderer.psm1"
 $allFonts = Get-AllFontDeclarations
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
@@ -185,50 +186,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         }
         Write-Host "hash: $hash"
 
-        $manifest = [ordered]@{
-            "version"     = $version
-            "description" = $description
-            "homepage"    = "https://github.com/$($var.Repo)"
-            "license"     = $license
-            "url"         = $downloadUrl
-            "hash"        = $hash
-            "extract_dir" = $var.Dir
-            "installer"   = @{
-                "script" = @('$filter = ' + "'$($var.Filter)'")
-            }
-            "uninstaller" = @{
-                "script" = @('$filter = ' + "'$($var.Filter)'")
-            }
-            "checkver"    = [ordered]@{
-                "url"      = $releaseUrl
-                "jsonpath" = $jsonPath
-                "regex"    = $var.Regex
-            }
-            "autoupdate"  = [ordered]@{
-                "url" = $versionUrl
-            }
-        }
-
-        # Add replace directive for fonts with multiple capture groups to generate composite version
-        if ($match.Groups.Count -gt 2) {
-            if ($null -ne $var.Version) {
-                $manifest.checkver["replace"] = $var.Version
-            } else {
-                $replacePattern = @()
-                for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                    $replacePattern += "`${$i}"
-                }
-                $manifest.checkver["replace"] = $replacePattern -join '.'
-            }
-        }
-
-        foreach ($line in $installer) {
-            $manifest.installer.script += $line
-        }
-
-        foreach ($line in $uninstaller) {
-            $manifest.uninstaller.script += $line
-        }
+        $manifest = New-ScoopManifest -Declaration $var -Version $version -Description $description -License $license -Hash $hash -DownloadUrl $downloadUrl -ReleaseUrl $releaseUrl -JsonPath $jsonPath -VersionUrl $versionUrl -Match $match -InstallerLines $installer -UninstallerLines $uninstaller
 
         $cleanManifest = [ordered]@{}
         $manifest.GetEnumerator() | Where-Object { $null -ne $_.Value } | ForEach-Object {
