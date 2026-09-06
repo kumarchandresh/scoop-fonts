@@ -200,7 +200,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/github/mona-sans/releases",
+        "url": "https://api.github.com/repos/github/mona-sans/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/mona-sans-static-v?([\\d.]+)+.zip"
     },

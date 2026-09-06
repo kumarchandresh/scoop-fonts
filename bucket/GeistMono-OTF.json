@@ -199,7 +199,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/vercel/geist-font/releases",
+        "url": "https://api.github.com/repos/vercel/geist-font/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/geist-font-v?([\\d.]+)+.zip"
     },

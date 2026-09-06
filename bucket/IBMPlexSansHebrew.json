@@ -200,7 +200,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/IBM/plex/releases",
+        "url": "https://api.github.com/repos/IBM/plex/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "%40([\\d.]+)/ibm-plex-sans-hebrew\\.zip"
     },

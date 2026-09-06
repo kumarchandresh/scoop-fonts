@@ -199,7 +199,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/0xType/0xProto/releases",
+        "url": "https://api.github.com/repos/0xType/0xProto/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/v?([\\d.]+)/.*\\.zip"
     },

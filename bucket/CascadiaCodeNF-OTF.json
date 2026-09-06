@@ -200,7 +200,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/microsoft/cascadia-code/releases",
+        "url": "https://api.github.com/repos/microsoft/cascadia-code/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/v?([\\d.]+)/.*\\.zip"
     },

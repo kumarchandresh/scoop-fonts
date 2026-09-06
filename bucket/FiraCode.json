@@ -200,7 +200,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/tonsky/FiraCode/releases",
+        "url": "https://api.github.com/repos/tonsky/FiraCode/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/Fira_Code_?v?([\\d.]+)+.zip"
     },

@@ -199,7 +199,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/subframe7536/maple-font/releases",
+        "url": "https://api.github.com/repos/subframe7536/maple-font/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/v?([\\d.]+)/MapleMonoNormalNL-CN-unhinted\\.zip"
     },

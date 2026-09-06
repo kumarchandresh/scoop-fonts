@@ -199,7 +199,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/be5invis/Iosevka/releases",
+        "url": "https://api.github.com/repos/be5invis/Iosevka/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/v?([\\d.]+)/SuperTTC-SGr-IosevkaTermSS13-[\\d.]+\\.zip"
     },

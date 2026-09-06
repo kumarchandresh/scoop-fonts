@@ -200,7 +200,7 @@
         ]
     },
     "checkver": {
-        "github": "https://api.github.com/repos/intel/intel-one-mono/releases",
+        "url": "https://api.github.com/repos/intel/intel-one-mono/releases",
         "jsonpath": "$[*].assets[*].browser_download_url",
         "regex": "/V?([\\d.]+)+/otf.zip"
     },
