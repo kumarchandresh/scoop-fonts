@@ -2,6 +2,7 @@ $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
 Import-Module (Join-Path $modulesDir 'ManifestSources.psm1') -Force
 Import-Module (Join-Path $modulesDir 'ManifestRenderer.psm1') -Force
 Import-Module (Join-Path $modulesDir 'ManifestInventory.psm1') -Force
+Import-Module (Join-Path $modulesDir 'ScoopArtifactCache.psm1') -Force
 Import-Module (Join-Path $modulesDir 'IBMPlex.psm1') -Force
 Import-Module (Join-Path $modulesDir 'Iosevka.psm1') -Force
 Import-Module (Join-Path $modulesDir 'MapleMono.psm1') -Force
@@ -49,6 +50,24 @@ Describe 'Manifest inventory' {
             Test-Path (Join-Path $deprecated 'Unmanaged.json') | Should Be $true
         } finally {
             Remove-Item -Recurse -Force $root
+        }
+    }
+}
+
+Describe 'Scoop artifact cache' {
+    It 'materializes a verified artifact using Scoop cache naming' {
+        $root = Join-Path $env:TEMP ('scoop-cache-test-' + [guid]::NewGuid())
+        $url = 'https://github.com/example/fonts/releases/download/v1.2/font-1.2.zip'
+        try {
+            $artifact = Get-ManifestArtifactPath -DownloadUrl $url -Version '1.2' -CacheDirectory $root
+            New-Item -ItemType Directory -Force -Path (Split-Path $artifact) | Out-Null
+            Set-Content -Path $artifact -Value 'artifact'
+            $hash = (Get-FileHash $artifact -Algorithm SHA256).Hash.ToLower()
+            $scoopPath = Seed-ScoopArtifactCache -App 'ExampleFont' -Version '1.2' -DownloadUrl $url -ExpectedHash $hash -ArtifactCacheDirectory $root -ScoopCacheDirectory (Join-Path $root 'scoop')
+            Test-Path $scoopPath | Should Be $true
+            (Get-FileHash $scoopPath -Algorithm SHA256).Hash.ToLower() | Should Be $hash
+        } finally {
+            Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
         }
     }
 }
