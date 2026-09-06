@@ -209,7 +209,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
     }
 
 
-    if (-not $NoCheckVer) {
+    if (-not $NoCheckVer -and -not $Offline) {
         & "$PSScriptRoot\..\bin\checkver.ps1" $file -u
     }
 
