@@ -37,6 +37,52 @@ function Get-ManifestCachePath {
     return Join-Path $CacheDirectory "$Key.$Extension"
 }
 
+function ConvertTo-ManifestCachePathPart {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Value
+    )
+
+    $part = $Value.Trim() -replace '[<>:"/\\|?*]', '_'
+    if ([string]::IsNullOrWhiteSpace($part) -or $part -in @('.', '..')) {
+        return '_'
+    }
+    return $part
+}
+
+function Get-ManifestArtifactPath {
+    param(
+        [Parameter(Mandatory)]
+        [string]$DownloadUrl,
+        [Parameter(Mandatory)]
+        [string]$Version,
+        [Parameter()]
+        [string]$CacheDirectory
+    )
+
+    $uri = [uri]$DownloadUrl
+    $segments = @($uri.AbsolutePath.Trim('/') -split '/' | Where-Object { $_ })
+    if ($segments.Count -eq 0) {
+        throw "Cannot derive an artifact filename from URL: $DownloadUrl"
+    }
+
+    $fileName = ConvertTo-ManifestCachePathPart ([uri]::UnescapeDataString($segments[-1]))
+    if ($uri.Host -eq 'github.com' -and $segments.Count -ge 3) {
+        $owner = ConvertTo-ManifestCachePathPart $segments[0]
+        $repo = ConvertTo-ManifestCachePathPart ($segments[1] -replace '\.git$', '')
+    } else {
+        $owner = ConvertTo-ManifestCachePathPart $uri.Host
+        $repo = ConvertTo-ManifestCachePathPart $(if ($segments.Count -gt 1) { $segments[0] } else { 'artifacts' })
+    }
+
+    $root = if ($CacheDirectory) {
+        Join-Path $CacheDirectory 'artifacts'
+    } else {
+        Join-Path $env:TEMP 'scoop-fonts'
+    }
+    return Join-Path (Join-Path (Join-Path (Join-Path $root $owner) $repo) (ConvertTo-ManifestCachePathPart $Version)) $fileName
+}
+
 function Invoke-GitHubRateLimitedRestMethod {
     param(
         [Parameter(Mandatory)]
@@ -103,8 +149,8 @@ function Get-GitHubRepositoryMetadata {
 
     $repo = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository" -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline
     $license = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository/license" -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline |
-        Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
-        Select-Object -ExpandProperty License
+    Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
+    Select-Object -ExpandProperty License
     if ('NOASSERTION' -eq $license) {
         $license = $FallbackLicense
     }
@@ -149,8 +195,8 @@ function Get-GitHubReleaseData {
     }
 
     return @{
-        Info = $releaseInfo
-        Url = $releaseUrl
+        Info     = $releaseInfo
+        Url      = $releaseUrl
         JsonPath = if ($Latest) { '$.assets[*].browser_download_url' } else { '$[*].assets[*].browser_download_url' }
     }
 }
@@ -167,14 +213,14 @@ function Find-GitHubDownloadUrl {
 
     if ($Latest) {
         return @($ReleaseInfo.assets.browser_download_url) |
-            Where-Object { $_ -match $Regex } |
-            Select-Object -First 1
+        Where-Object { $_ -match $Regex } |
+        Select-Object -First 1
     }
 
     return $ReleaseInfo |
-        ForEach-Object { $_.assets.browser_download_url } |
-        Where-Object { $_ -match $Regex } |
-        Select-Object -First 1
+    ForEach-Object { $_.assets.browser_download_url } |
+    Where-Object { $_ -match $Regex } |
+    Select-Object -First 1
 }
 
 function Get-NerdFontsCatalog {
@@ -216,25 +262,18 @@ function Get-ManifestArtifactHash {
         return $Cache[$cacheKey]
     }
 
-    $name = $DownloadUrl -split '/' | Select-Object -Last 1
-    $cleanVer = "$Version" -replace '[^\w.-]', ''
-    $outfile = if ($CacheDirectory) {
-        $cacheFile = Get-ManifestCachePath -CacheDirectory (Join-Path $CacheDirectory 'artifacts') -Key (Get-ManifestCacheKey $DownloadUrl) -Extension 'bin'
-        New-Item -ItemType Directory -Force -Path (Split-Path $cacheFile) | Out-Null
-        $cacheFile
-    } else {
-        Join-Path ${env:TEMP} "v$cleanVer-$name"
-    }
-    if ($CacheDirectory) {
-        if (-not (Test-Path $outfile)) {
-            if ($Offline) {
-                return $null
-            }
-            Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
+    $outfile = Get-ManifestArtifactPath -DownloadUrl $DownloadUrl -Version $Version -CacheDirectory $CacheDirectory
+    if (-not (Test-Path $outfile)) {
+        if ($Offline) {
+            return $null
         }
-    } else {
-        if (-not (Test-Path $outfile)) {
-            Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
+        New-Item -ItemType Directory -Force -Path (Split-Path $outfile) | Out-Null
+        $partial = "$outfile.download"
+        try {
+            Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $partial
+            Move-Item -Force $partial $outfile
+        } finally {
+            Remove-Item -Force $partial -ErrorAction SilentlyContinue
         }
     }
     if (-not (Test-Path $outfile)) {
