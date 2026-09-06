@@ -67,7 +67,21 @@ Describe 'Manifest renderer' {
     It 'preserves the generated manifest contract' {
         $declaration = @{ Repo = 'example/repo'; Filter = 'Font-.*\.ttf$'; Regex = '/v?([\d.]+)/font-[\d.]+\.zip'; Dir = 'fonts' }
         $match = [regex]::new($declaration.Regex).Match('/v1.2/font-1.2.zip')
-        $manifest = New-ScoopManifest -Declaration $declaration -Version '1.2' -Description 'Example' -License 'OFL-1.1' -Hash ('a' * 64) -DownloadUrl 'https://example.test/font-1.2.zip' -ReleaseUrl 'https://api.github.com/repos/example/repo/releases' -JsonPath '$[*].assets[*].browser_download_url' -VersionUrl 'https://example.test/font-$version.zip' -Match $match -InstallerLines @('install-line') -UninstallerLines @('uninstall-line')
+        $manifestParams = @{
+            Declaration      = $declaration
+            Version          = '1.2'
+            Description      = 'Example'
+            License          = 'OFL-1.1'
+            Hash             = ('a' * 64)
+            DownloadUrl      = 'https://example.test/font-1.2.zip'
+            ReleaseUrl       = 'https://api.github.com/repos/example/repo/releases'
+            JsonPath         = '$[*].assets[*].browser_download_url'
+            VersionUrl       = 'https://example.test/font-$version.zip'
+            Match            = $match
+            InstallerLines   = @('install-line')
+            UninstallerLines = @('uninstall-line')
+        }
+        $manifest = New-ScoopManifest @manifestParams
         @($manifest.Keys) -join ',' | Should -Be 'version,description,homepage,license,url,hash,extract_dir,installer,uninstaller,checkver,autoupdate'
         $manifest.installer.script.Count | Should -Be 2
         $manifest.uninstaller.script.Count | Should -Be 2
@@ -76,14 +90,42 @@ Describe 'Manifest renderer' {
     It 'generates composite checkver replace pattern for multiple capture groups without explicit Version' {
         $declaration = @{ Repo = 'example/repo'; Filter = '\.ttf$'; Regex = '/v?([\d.]+)-build(\d+)/font\.zip'; Dir = 'fonts' }
         $match = [regex]::new($declaration.Regex).Match('/v1.2-build34/font.zip')
-        $manifest = New-ScoopManifest -Declaration $declaration -Version '1.2.34' -Description 'Example' -License 'MIT' -Hash ('a' * 64) -DownloadUrl 'https://example.test/font.zip' -ReleaseUrl 'https://api.github.com' -JsonPath '$.url' -VersionUrl 'https://example.test/font.zip' -Match $match -InstallerLines @('i') -UninstallerLines @('u')
+        $manifestParams = @{
+            Declaration      = $declaration
+            Version          = '1.2.34'
+            Description      = 'Example'
+            License          = 'MIT'
+            Hash             = ('a' * 64)
+            DownloadUrl      = 'https://example.test/font.zip'
+            ReleaseUrl       = 'https://api.github.com'
+            JsonPath         = '$.url'
+            VersionUrl       = 'https://example.test/font.zip'
+            Match            = $match
+            InstallerLines   = @('i')
+            UninstallerLines = @('u')
+        }
+        $manifest = New-ScoopManifest @manifestParams
         $manifest.checkver.replace | Should -Be '${1}.${2}'
     }
 
     It 'uses explicit declaration Version template when multiple capture groups are present' {
         $declaration = @{ Repo = 'example/repo'; Filter = '\.ttf$'; Regex = '/v?([\d.]+)-build(\d+)/font\.zip'; Version = '${1}_b${2}'; Dir = 'fonts' }
         $match = [regex]::new($declaration.Regex).Match('/v1.2-build34/font.zip')
-        $manifest = New-ScoopManifest -Declaration $declaration -Version '1.2_b34' -Description 'Example' -License 'MIT' -Hash ('a' * 64) -DownloadUrl 'https://example.test/font.zip' -ReleaseUrl 'https://api.github.com' -JsonPath '$.url' -VersionUrl 'https://example.test/font.zip' -Match $match -InstallerLines @('i') -UninstallerLines @('u')
+        $manifestParams = @{
+            Declaration      = $declaration
+            Version          = '1.2_b34'
+            Description      = 'Example'
+            License          = 'MIT'
+            Hash             = ('a' * 64)
+            DownloadUrl      = 'https://example.test/font.zip'
+            ReleaseUrl       = 'https://api.github.com'
+            JsonPath         = '$.url'
+            VersionUrl       = 'https://example.test/font.zip'
+            Match            = $match
+            InstallerLines   = @('i')
+            UninstallerLines = @('u')
+        }
+        $manifest = New-ScoopManifest @manifestParams
         $manifest.checkver.replace | Should -Be '${1}_b${2}'
     }
 }
@@ -253,7 +295,21 @@ Describe 'Golden manifest equivalence' {
         $installerContent = @(Get-Content (Join-Path $PSScriptRoot '..\installer.ps1') | Where-Object { $_ -and $_ -notmatch '^\s*#' })
         $uninstallerContent = @(Get-Content (Join-Path $PSScriptRoot '..\uninstaller.ps1') | Where-Object { $_ -and $_ -notmatch '^\s*#' })
 
-        $rendered = New-ScoopManifest -Declaration $decl -Version $version -Description $description -License $license -Hash $hash -DownloadUrl $downloadUrl -ReleaseUrl $releaseUrl -JsonPath $jsonPath -VersionUrl $versionUrl -Match $match -InstallerLines $installerContent -UninstallerLines $uninstallerContent
+        $manifestParams = @{
+            Declaration      = $decl
+            Version          = $version
+            Description      = $description
+            License          = $license
+            Hash             = $hash
+            DownloadUrl      = $downloadUrl
+            ReleaseUrl       = $releaseUrl
+            JsonPath         = $jsonPath
+            VersionUrl       = $versionUrl
+            Match            = $match
+            InstallerLines   = $installerContent
+            UninstallerLines = $uninstallerContent
+        }
+        $rendered = New-ScoopManifest @manifestParams
 
         $golden = Get-Content (Join-Path $PSScriptRoot '..\..\bucket\JetBrainsMono.json') -Raw | ConvertFrom-Json
 
@@ -286,7 +342,21 @@ Describe 'Golden manifest equivalence' {
         $installerContent = @(Get-Content (Join-Path $PSScriptRoot '..\installer.ps1') | Where-Object { $_ -and $_ -notmatch '^\s*#' })
         $uninstallerContent = @(Get-Content (Join-Path $PSScriptRoot '..\uninstaller.ps1') | Where-Object { $_ -and $_ -notmatch '^\s*#' })
 
-        $rendered = New-ScoopManifest -Declaration $decl -Version $version -Description $description -License $license -Hash $hash -DownloadUrl $downloadUrl -ReleaseUrl $releaseUrl -JsonPath $jsonPath -VersionUrl $versionUrl -Match $match -InstallerLines $installerContent -UninstallerLines $uninstallerContent
+        $manifestParams = @{
+            Declaration      = $decl
+            Version          = $version
+            Description      = $description
+            License          = $license
+            Hash             = $hash
+            DownloadUrl      = $downloadUrl
+            ReleaseUrl       = $releaseUrl
+            JsonPath         = $jsonPath
+            VersionUrl       = $versionUrl
+            Match            = $match
+            InstallerLines   = $installerContent
+            UninstallerLines = $uninstallerContent
+        }
+        $rendered = New-ScoopManifest @manifestParams
 
         $golden = Get-Content (Join-Path $PSScriptRoot '..\..\bucket\CascadiaCode.json') -Raw | ConvertFrom-Json
 

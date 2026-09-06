@@ -23,8 +23,8 @@ $allFonts = Get-AllFontDeclarations
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
-$installer = @(Get-Content "$PSScriptRoot\installer.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
-$uninstaller = @(Get-Content "$PSScriptRoot\uninstaller.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
+$installerLines = @(Get-Content "$PSScriptRoot\installer.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
+$uninstallerLines = @(Get-Content "$PSScriptRoot\uninstaller.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
 
 $cache = @{}
 $hashes = @{}
@@ -183,7 +183,21 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         }
         Write-Host "hash: $hash"
 
-        $manifest = New-ScoopManifest -Declaration $var -Version $version -Description $description -License $license -Hash $hash -DownloadUrl $downloadUrl -ReleaseUrl $releaseUrl -JsonPath $jsonPath -VersionUrl $versionUrl -Match $match -InstallerLines $installer -UninstallerLines $uninstaller
+        $manifestParams = @{
+            Declaration      = $var
+            Version          = $version
+            Description      = $description
+            License          = $license
+            Hash             = $hash
+            DownloadUrl      = $downloadUrl
+            ReleaseUrl       = $releaseUrl
+            JsonPath         = $jsonPath
+            VersionUrl       = $versionUrl
+            Match            = $match
+            InstallerLines   = $installerLines
+            UninstallerLines = $uninstallerLines
+        }
+        $manifest = New-ScoopManifest @manifestParams
 
         $cleanManifest = [ordered]@{}
         $manifest.GetEnumerator() | Where-Object { $null -ne $_.Value } | ForEach-Object {
