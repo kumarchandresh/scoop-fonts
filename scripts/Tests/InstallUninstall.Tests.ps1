@@ -5,18 +5,21 @@ $fontsDir = Join-Path $PSScriptRoot '..\Fonts' -Resolve
 
 $targetManifests = @()
 if ($env:FONT_INTEGRATION_MODULE) {
-    $moduleFile = Join-Path $fontsDir "$($env:FONT_INTEGRATION_MODULE).psm1"
-    if (-not (Test-Path $moduleFile)) {
+    $pattern = $env:FONT_INTEGRATION_MODULE
+    $matchedModules = @(Get-ChildItem $fontsDir -Filter '*.psm1' | Where-Object { $_.BaseName -match $pattern } | Sort-Object Name)
+    if ($matchedModules.Count -eq 0) {
         $availableModules = @(Get-ChildItem $fontsDir -Filter '*.psm1' | ForEach-Object { $_.BaseName })
-        throw "Specified integration module not found: '$($env:FONT_INTEGRATION_MODULE)'. Available font modules: $($availableModules -join ', '). If you intended to test the font manifest '$($env:FONT_INTEGRATION_MODULE)', use `$env:FONT_INTEGRATION_MANIFEST instead."
+        throw "Specified integration module regex '$pattern' did not match any font modules. Available font modules: $($availableModules -join ', '). If you intended to test the font manifest '$pattern', use `$env:FONT_INTEGRATION_MANIFEST instead."
     }
-    Import-Module $moduleFile -Force
-    $fn = "Get-$($env:FONT_INTEGRATION_MODULE)Fonts"
-    if (-not (Get-Command -Name $fn -ErrorAction SilentlyContinue)) {
-        $fn = "Get-$($env:FONT_INTEGRATION_MODULE)"
+    foreach ($module in $matchedModules) {
+        Import-Module $module.FullName -Force
+        $fn = "Get-$($module.BaseName)Fonts"
+        if (-not (Get-Command -Name $fn -ErrorAction SilentlyContinue)) {
+            $fn = "Get-$($module.BaseName)"
+        }
+        $declarations = & $fn
+        $targetManifests += @($declarations.Keys)
     }
-    $declarations = & $fn
-    $targetManifests = @($declarations.Keys)
 } elseif ($env:FONT_INTEGRATION_MANIFEST) {
     $regex = $env:FONT_INTEGRATION_MANIFEST
     $targetManifests = @(Get-ChildItem $bucketDir -Filter '*.json' | Where-Object { $_.BaseName -match $regex } | ForEach-Object { $_.BaseName })
