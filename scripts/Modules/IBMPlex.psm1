@@ -1,16 +1,4 @@
 function Get-IBMPlexFonts {
-    $headers = @{
-        "User-Agent" = "PowerShell"
-        "Accept"     = "application/vnd.github.v3+json"
-    }
-    if ($env:GITHUB_TOKEN) {
-        $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
-    }
-    Write-Host 'Fetching release data for IBM Plex...'
-    $urls = Invoke-RestMethod 'https://api.github.com/repos/IBM/plex/releases' -Headers $headers | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match '\.zip$' }
-    if ($urls.Count -eq 0) {
-        Write-Warning 'IBM Plex: Failed to fetch release data from GitHub API.'
-    }
     $plexFonts = @(
         @{ fontName = 'IBMPlexMono'; fileName = 'ibm-plex-mono'; dir = 'ibm-plex-mono\fonts\complete\ttf'; filter = 'IBMPlexMono-.*\.ttf$' },
         @{ fontName = 'IBMPlexMono-OTF'; fileName = 'ibm-plex-mono'; dir = 'ibm-plex-mono\fonts\complete\otf'; filter = 'IBMPlexMono-.*\.otf$' },
@@ -53,15 +41,12 @@ function Get-IBMPlexFonts {
     $manifests = [ordered]@{}
     foreach ($font in $plexFonts) {
         $fontRegex = "%40([\d.]+)/$($font.fileName)\.zip"
-        foreach ($url in ($urls | Where-Object { $_ -match $fontRegex })) {
-            $manifests[$font.fontName] = @{
-                Name   = $font.fontName
-                Repo   = 'IBM/plex'
-                Regex  = $fontRegex
-                Filter = $font.filter
-                Dir    = $font.dir
-            }
-            break; # latest at top, no need to continue
+        $manifests[$font.fontName] = @{
+            Name   = $font.fontName
+            Repo   = 'IBM/plex'
+            Regex  = $fontRegex
+            Filter = $font.filter
+            Dir    = $font.dir
         }
     }
 
