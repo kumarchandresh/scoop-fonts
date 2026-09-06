@@ -16,18 +16,10 @@ Set-StrictMode -Version 1
 $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 
 Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
 $allFonts = Get-AllFontDeclarations
 
-Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
-    if (-not $allFonts.Contains($_.BaseName)) {
-        if ($Clean) {
-            Write-Host "unmanaged manifest deprecated: $($_.BaseName)" -ForegroundColor Yellow
-            Copy-Item -Path $_.FullName -Destination "$ROOT_DIR\deprecated\$($_.BaseName).json"
-        } else {
-            Write-Host "unmanaged manifest detected: $($_.BaseName)" -ForegroundColor DarkGray
-        }
-    }
-}
+Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
 $installerContent = Get-Content "$PSScriptRoot\installer.ps1"
 $installer = @()
