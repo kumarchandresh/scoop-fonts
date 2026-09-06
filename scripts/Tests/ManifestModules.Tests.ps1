@@ -54,23 +54,15 @@ Describe 'Manifest source helpers' {
         }
     }
 
-    It 'reads cached responses from disk without network and throws on offline miss' {
-        $root = Join-Path $env:TEMP ('response-cache-test-' + [guid]::NewGuid())
-        try {
-            $cacheDir = Join-Path $root 'responses'
-            $uri = 'https://api.github.com/repos/example/repo/releases'
-            $key = Get-ManifestCacheKey $uri
-            $responseFile = Get-ManifestCachePath -CacheDirectory $cacheDir -Key $key -Extension 'json'
-            New-Item -ItemType Directory -Force -Path (Split-Path $responseFile) | Out-Null
-            ConvertTo-Json @{ tag_name = 'v1.0' } | Out-File -Encoding utf8 -FilePath $responseFile
-
-            $cached = Invoke-GitHubRateLimitedRestMethod -Uri $uri -Headers @{} -RateLimitState @{ LastApiCall = $null; ApiCallInterval = 0 } -CacheDirectory $root
-            $cached.tag_name | Should Be 'v1.0'
-
-            { Invoke-GitHubRateLimitedRestMethod -Uri 'https://api.github.com/missing' -Headers @{} -RateLimitState @{ LastApiCall = $null; ApiCallInterval = 0 } -CacheDirectory $root -Offline } | Should Throw 'Offline input cache miss'
-        } finally {
-            Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
+    It 'throws when multiple assets match regex' {
+        $release = [PSCustomObject]@{
+            assets = @(
+                [PSCustomObject]@{ browser_download_url = 'https://example.test/font-1.2.zip' }
+                [PSCustomObject]@{ browser_download_url = 'https://example.test/font-1.2-extra.zip' }
+            )
         }
+        { Find-GitHubDownloadUrl -ReleaseInfo $release -Latest $true -Regex 'font-1\.2.*\.zip' } | Should Throw 'Ambiguous asset match'
+        { Find-GitHubDownloadUrl -ReleaseInfo @($release) -Latest $false -Regex 'font-1\.2.*\.zip' } | Should Throw 'Ambiguous asset match'
     }
 }
 
@@ -195,38 +187,28 @@ Describe 'Scoop artifact cache' {
 
 Describe 'Nerd Fonts catalog mapping' {
     It 'maps special-case and standard font families correctly from catalog entries' {
-        $root = Join-Path $env:TEMP ('nf-catalog-test-' + [guid]::NewGuid())
-        try {
-            $respDir = Join-Path $root 'responses'
-            New-Item -ItemType Directory -Force -Path $respDir | Out-Null
-            $key = Get-ManifestCacheKey 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json'
-            $fixture = @{ fonts = @(
-                    @{ folderName = 'Arimo'; patchedName = 'Arimo'; licenseId = 'Apache-2.0'; description = 'Arimo NF' },
-                    @{ folderName = 'NerdFontsSymbolsOnly'; patchedName = 'NerdFontsSymbolsOnly'; licenseId = 'MIT'; description = 'Symbols NF' },
-                    @{ folderName = 'Hack'; patchedName = 'Hack'; licenseId = 'MIT'; description = 'Hack NF' }
-                )
-            }
-            ConvertTo-Json $fixture -Depth 10 | Out-File -FilePath (Join-Path $respDir "$key.json") -Encoding utf8
+        $fixture = @(
+            @{ folderName = 'Arimo'; patchedName = 'Arimo'; licenseId = 'Apache-2.0'; description = 'Arimo NF' },
+            @{ folderName = 'NerdFontsSymbolsOnly'; patchedName = 'NerdFontsSymbolsOnly'; licenseId = 'MIT'; description = 'Symbols NF' },
+            @{ folderName = 'Hack'; patchedName = 'Hack'; licenseId = 'MIT'; description = 'Hack NF' }
+        )
 
-            $fonts = Get-NerdFonts -CacheDirectory $root -Offline
+        $fonts = Get-NerdFonts -Catalog $fixture
 
-            # Arimo has only '' and 'Propo' (no Mono)
-            ($fonts.Contains('ArimoNerdFont')) | Should Be $true
-            ($fonts.Contains('ArimoNerdFontPropo')) | Should Be $true
-            ($fonts.Contains('ArimoNerdFontMono')) | Should Be $false
+        # Arimo has only '' and 'Propo' (no Mono)
+        ($fonts.Contains('ArimoNerdFont')) | Should Be $true
+        ($fonts.Contains('ArimoNerdFontPropo')) | Should Be $true
+        ($fonts.Contains('ArimoNerdFontMono')) | Should Be $false
 
-            # SymbolsOnly has only '' and 'Mono' (no Propo)
-            ($fonts.Contains('NerdFontsSymbolsOnlyNerdFont')) | Should Be $true
-            ($fonts.Contains('NerdFontsSymbolsOnlyNerdFontMono')) | Should Be $true
-            ($fonts.Contains('NerdFontsSymbolsOnlyNerdFontPropo')) | Should Be $false
+        # SymbolsOnly has only '' and 'Mono' (no Propo)
+        ($fonts.Contains('NerdFontsSymbolsOnlyNerdFont')) | Should Be $true
+        ($fonts.Contains('NerdFontsSymbolsOnlyNerdFontMono')) | Should Be $true
+        ($fonts.Contains('NerdFontsSymbolsOnlyNerdFontPropo')) | Should Be $false
 
-            # Standard font Hack has '', 'Mono', and 'Propo'
-            ($fonts.Contains('HackNerdFont')) | Should Be $true
-            ($fonts.Contains('HackNerdFontMono')) | Should Be $true
-            ($fonts.Contains('HackNerdFontPropo')) | Should Be $true
-        } finally {
-            Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
-        }
+        # Standard font Hack has '', 'Mono', and 'Propo'
+        ($fonts.Contains('HackNerdFont')) | Should Be $true
+        ($fonts.Contains('HackNerdFontMono')) | Should Be $true
+        ($fonts.Contains('HackNerdFontPropo')) | Should Be $true
     }
 }
 

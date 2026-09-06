@@ -8,18 +8,10 @@ param (
     [Parameter()]
     [switch]$NoCheckVer,
     [Parameter()]
-    [switch]$Clean,
-    [Parameter()]
-    [string]$CacheDirectory,
-    [Parameter()]
-    [switch]$Offline
+    [switch]$Clean
 )
 
 Set-StrictMode -Version 1
-
-if ($Offline -and -not $CacheDirectory) {
-    throw 'The -Offline switch requires -CacheDirectory.'
-}
 
 $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 
@@ -27,7 +19,7 @@ Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestSources.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestRenderer.psm1"
-$allFonts = Get-AllFontDeclarations -CacheDirectory $CacheDirectory -Offline:$Offline
+$allFonts = Get-AllFontDeclarations
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
@@ -63,13 +55,31 @@ $rateLimitState = @{ LastApiCall = $null; ApiCallInterval = 500 }
 
 $formatjson = "$PSScriptRoot\..\bin\formatjson.ps1"
 
+$failedManifests = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+function Add-ManifestFailure {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [string]$Stage,
+        [Parameter(Mandatory)]
+        [string]$Reason
+    )
+    $failedManifests.Add([PSCustomObject]@{
+            Name   = $Name
+            Stage  = $Stage
+            Reason = $Reason
+        })
+    Write-Host "Failed [$Stage] for $($Name): $Reason" -ForegroundColor Red
+}
+
 foreach ($fontEntry in $allFonts.GetEnumerator()) {
     $var = $fontEntry.Value
     $var.Name = $fontEntry.Key
 
-
     if (-not $var.ContainsKey('Filter')) {
-        Write-Error "missing filter: $($var.Name)"
+        Add-ManifestFailure -Name $var.Name -Stage 'Declaration' -Reason 'Missing Filter property'
         continue
     }
 
@@ -91,7 +101,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         $headers = New-GitHubHeaders
 
         $originRepo = if ( $null -eq $var.Origin ) { $var.Repo } else { $var.Origin }
-        $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -RateLimitState $rateLimitState -FallbackLicense $var.License -CacheDirectory $CacheDirectory -Offline:$Offline
+        $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -RateLimitState $rateLimitState -FallbackLicense $var.License
         $repo = $metadata.Repo
         $license = $metadata.License
         if ($var.ContainsKey('License')) {
@@ -99,7 +109,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         }
 
         if ($null -eq $repo) {
-            Write-Host "Failed to retrieve repository info for $($var.Repo)" -ForegroundColor Red
+            Add-ManifestFailure -Name $var.Name -Stage 'Repository' -Reason "Failed to retrieve repository info for $($var.Repo)"
             continue
         }
 
@@ -107,25 +117,30 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         Write-Host "description: $description"
 
         if ($null -eq $license) {
-            Write-Host "Failed to retrieve license info for repository $($var.Repo)" -ForegroundColor Red
+            Add-ManifestFailure -Name $var.Name -Stage 'License' -Reason "Failed to retrieve license info for repository $($var.Repo)"
             continue
         }
         Write-Host "license: $license"
 
         $useLatest = $var.ContainsKey('Latest') -and $var.Latest
-        $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases -RateLimitState $rateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline
+        $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases -RateLimitState $rateLimitState
         if ($null -eq $release) {
-            Write-Host "Failed to retrieve release info for repository $($var.Repo)" -ForegroundColor Red
+            Add-ManifestFailure -Name $var.Name -Stage 'Release' -Reason "Failed to retrieve release info for repository $($var.Repo)"
             continue
         }
         $releaseInfo = $release.Info
         $releaseUrl = $release.Url
         $jsonPath = $release.JsonPath
 
-        $downloadUrl = Find-GitHubDownloadUrl -ReleaseInfo $releaseInfo -Latest $useLatest -Regex $var.Regex
+        try {
+            $downloadUrl = Find-GitHubDownloadUrl -ReleaseInfo $releaseInfo -Latest $useLatest -Regex $var.Regex
+        } catch {
+            Add-ManifestFailure -Name $var.Name -Stage 'Asset Resolution' -Reason $_.Exception.Message
+            continue
+        }
 
         if ($null -eq $downloadUrl) {
-            Write-Host "Failed to find download url matching regex '$($var.Regex)' in repository $($var.Repo)" -ForegroundColor Red
+            Add-ManifestFailure -Name $var.Name -Stage 'Asset Resolution' -Reason "Failed to find download url matching regex '$($var.Regex)' in repository $($var.Repo)"
             continue
         }
         Write-Host "url: $downloadUrl"
@@ -158,7 +173,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         }
 
         if ($null -eq $version) {
-            Write-Host "Failed to retrieve version info for $($var.Repo)" -ForegroundColor Red
+            Add-ManifestFailure -Name $var.Name -Stage 'Version' -Reason "Failed to retrieve version info for $($var.Repo)"
             continue
         }
         Write-Host "version: $version"
@@ -182,14 +197,9 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
             $versionUrl = $versionUrl -replace [regex]::Escape($cleanVersion), '$cleanVersion'
         }
 
-        $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes -CacheDirectory $CacheDirectory -Offline:$Offline
+        $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes
         if ($null -eq $hash) {
-            Write-Host "Failed to download file from $downloadUrl" -ForegroundColor Red
-            continue
-        }
-
-        if ($null -eq $hash) {
-            Write-Host "Failed to retrieve hash for $($var.Repo)" -ForegroundColor Red
+            Add-ManifestFailure -Name $var.Name -Stage 'Download' -Reason "Failed to download file or compute hash from $downloadUrl"
             continue
         }
         Write-Host "hash: $hash"
@@ -200,7 +210,6 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         $manifest.GetEnumerator() | Where-Object { $null -ne $_.Value } | ForEach-Object {
             $cleanManifest[$_.Key] = $_.Value
         }
-        # $cleanManifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $file
         ConvertTo-Json $cleanManifest | Out-File -Encoding utf8 -FilePath $file
 
         $app = [System.IO.Path]::GetFileNameWithoutExtension($file)
@@ -208,9 +217,19 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         & "$formatjson" $app
     }
 
-
-    if (-not $NoCheckVer -and -not $Offline) {
+    if (-not $NoCheckVer) {
         & "$PSScriptRoot\..\bin\checkver.ps1" $file -u
     }
+}
 
+if ($failedManifests.Count -gt 0) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "Manifest generation failed for $($failedManifests.Count) manifest(s):" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    foreach ($fail in $failedManifests) {
+        Write-Host "  • [$($fail.Stage)] $($fail.Name): $($fail.Reason)" -ForegroundColor Yellow
+    }
+    Write-Host ""
+    exit 1
 }

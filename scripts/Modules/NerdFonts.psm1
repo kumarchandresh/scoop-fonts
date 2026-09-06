@@ -1,12 +1,10 @@
 function Get-NerdFonts {
     param(
         [Parameter()]
-        [string]$CacheDirectory,
-        [Parameter()]
-        [switch]$Offline
+        $Catalog
     )
 
-    $fonts = Get-NerdFontsCatalog -CacheDirectory $CacheDirectory -Offline:$Offline
+    $fonts = if ($Catalog) { $Catalog } else { Get-NerdFontsCatalog }
     $manifests = [ordered]@{}
     foreach ($font in $fonts) {
         $folderName = $font.folderName
