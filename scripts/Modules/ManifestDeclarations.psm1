@@ -1,4 +1,11 @@
 function Get-AllFontDeclarations {
+    param(
+        [Parameter()]
+        [string]$CacheDirectory,
+        [Parameter()]
+        [switch]$Offline
+    )
+
     $allFonts = [ordered]@{}
     $declarations = @(
         @{ Module = '0xType.psm1'; Function = 'Get-0xTypeFonts' }
@@ -18,7 +25,11 @@ function Get-AllFontDeclarations {
 
     foreach ($declaration in $declarations) {
         Import-Module -Force (Join-Path $PSScriptRoot $declaration.Module)
-        $fontDeclarations = & $declaration.Function
+        if ($declaration.Function -eq 'Get-NerdFonts') {
+            $fontDeclarations = & $declaration.Function -CacheDirectory $CacheDirectory -Offline:$Offline
+        } else {
+            $fontDeclarations = & $declaration.Function
+        }
         $fontDeclarations.GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
     }
 

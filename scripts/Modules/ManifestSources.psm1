@@ -9,6 +9,34 @@ function New-GitHubHeaders {
     return $headers
 }
 
+function Get-ManifestCacheKey {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Value
+    )
+
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value.ToLower())
+        return ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLower()
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-ManifestCachePath {
+    param(
+        [Parameter(Mandatory)]
+        [string]$CacheDirectory,
+        [Parameter(Mandatory)]
+        [string]$Key,
+        [Parameter(Mandatory)]
+        [string]$Extension
+    )
+
+    return Join-Path $CacheDirectory "$Key.$Extension"
+}
+
 function Invoke-GitHubRateLimitedRestMethod {
     param(
         [Parameter(Mandatory)]
@@ -16,8 +44,24 @@ function Invoke-GitHubRateLimitedRestMethod {
         [Parameter(Mandatory)]
         [hashtable]$Headers,
         [Parameter(Mandatory)]
-        [hashtable]$RateLimitState
+        [hashtable]$RateLimitState,
+        [Parameter()]
+        [string]$CacheDirectory,
+        [Parameter()]
+        [switch]$Offline
     )
+
+    $cacheFile = $null
+    if ($CacheDirectory) {
+        $cacheFile = Get-ManifestCachePath -CacheDirectory (Join-Path $CacheDirectory 'responses') -Key (Get-ManifestCacheKey $Uri) -Extension 'json'
+        if (Test-Path $cacheFile) {
+            return Get-Content $cacheFile -Raw | ConvertFrom-Json -Depth 100
+        }
+        if ($Offline) {
+            throw "Offline input cache miss: $Uri"
+        }
+        New-Item -ItemType Directory -Force -Path (Split-Path $cacheFile) | Out-Null
+    }
 
     if ($RateLimitState.LastApiCall) {
         $elapsed = (Get-Date) - $RateLimitState.LastApiCall
@@ -27,7 +71,11 @@ function Invoke-GitHubRateLimitedRestMethod {
     }
 
     $RateLimitState.LastApiCall = Get-Date
-    return Invoke-RestMethod -Uri $Uri -Headers $Headers
+    $response = Invoke-RestMethod -Uri $Uri -Headers $Headers
+    if ($cacheFile) {
+        ConvertTo-Json $response -Depth 100 | Out-File -Encoding utf8 -FilePath $cacheFile
+    }
+    return $response
 }
 
 function Get-GitHubRepositoryMetadata {
@@ -41,7 +89,11 @@ function Get-GitHubRepositoryMetadata {
         [Parameter(Mandatory)]
         [hashtable]$RateLimitState,
         [Parameter()]
-        [string]$FallbackLicense
+        [string]$FallbackLicense,
+        [Parameter()]
+        [string]$CacheDirectory,
+        [Parameter()]
+        [switch]$Offline
     )
 
     $cacheKey = $Repository.ToLower()
@@ -49,8 +101,8 @@ function Get-GitHubRepositoryMetadata {
         return $Cache[$cacheKey]
     }
 
-    $repo = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository" -Headers $Headers -RateLimitState $RateLimitState
-    $license = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository/license" -Headers $Headers -RateLimitState $RateLimitState |
+    $repo = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository" -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline
+    $license = Invoke-GitHubRateLimitedRestMethod -Uri "https://api.github.com/repos/$Repository/license" -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline |
         Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
         Select-Object -ExpandProperty License
     if ('NOASSERTION' -eq $license) {
@@ -73,7 +125,11 @@ function Get-GitHubReleaseData {
         [Parameter(Mandatory)]
         [hashtable]$Cache,
         [Parameter(Mandatory)]
-        [hashtable]$RateLimitState
+        [hashtable]$RateLimitState,
+        [Parameter()]
+        [string]$CacheDirectory,
+        [Parameter()]
+        [switch]$Offline
     )
 
     $releaseUrl = if ($Latest) {
@@ -85,7 +141,7 @@ function Get-GitHubReleaseData {
     if ($Cache.ContainsKey($cacheKey)) {
         $releaseInfo = $Cache[$cacheKey]
     } else {
-        $releaseInfo = Invoke-GitHubRateLimitedRestMethod -Uri $releaseUrl -Headers $Headers -RateLimitState $RateLimitState
+        $releaseInfo = Invoke-GitHubRateLimitedRestMethod -Uri $releaseUrl -Headers $Headers -RateLimitState $RateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline
         if ($null -eq $releaseInfo) {
             return $null
         }
@@ -122,9 +178,17 @@ function Find-GitHubDownloadUrl {
 }
 
 function Get-NerdFontsCatalog {
+    param(
+        [Parameter()]
+        [string]$CacheDirectory,
+        [Parameter()]
+        [switch]$Offline
+    )
+
     $headers = New-GitHubHeaders
     Write-Host 'Fetching release data for Nerd Fonts...'
-    $fonts = (Invoke-RestMethod 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers).fonts
+    $rateLimitState = @{ LastApiCall = $null; ApiCallInterval = 0 }
+    $fonts = (Invoke-GitHubRateLimitedRestMethod -Uri 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers -RateLimitState $rateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline).fonts
     if ($fonts.Count -eq 0) {
         Write-Warning 'Nerd Fonts: Failed to fetch release data from GitHub.'
     }
@@ -140,7 +204,11 @@ function Get-ManifestArtifactHash {
         [Parameter(Mandatory)]
         [hashtable]$Headers,
         [Parameter(Mandatory)]
-        [hashtable]$Cache
+        [hashtable]$Cache,
+        [Parameter()]
+        [string]$CacheDirectory,
+        [Parameter()]
+        [switch]$Offline
     )
 
     $cacheKey = $DownloadUrl.ToLower()
@@ -150,8 +218,17 @@ function Get-ManifestArtifactHash {
 
     $name = $DownloadUrl -split '/' | Select-Object -Last 1
     $cleanVer = "$Version" -replace '[^\w.-]', ''
-    $outfile = Join-Path ${env:TEMP} "v$cleanVer-$name"
+    $outfile = if ($CacheDirectory) {
+        $cacheFile = Get-ManifestCachePath -CacheDirectory (Join-Path $CacheDirectory 'artifacts') -Key (Get-ManifestCacheKey $DownloadUrl) -Extension 'bin'
+        New-Item -ItemType Directory -Force -Path (Split-Path $cacheFile) | Out-Null
+        $cacheFile
+    } else {
+        Join-Path ${env:TEMP} "v$cleanVer-$name"
+    }
     if (-not (Test-Path $outfile)) {
+        if ($Offline) {
+            return $null
+        }
         Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
     }
     if (-not (Test-Path $outfile)) {

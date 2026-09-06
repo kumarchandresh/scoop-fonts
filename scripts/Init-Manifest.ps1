@@ -8,10 +8,18 @@ param (
     [Parameter()]
     [switch]$NoCheckVer,
     [Parameter()]
-    [switch]$Clean
+    [switch]$Clean,
+    [Parameter()]
+    [string]$CacheDirectory,
+    [Parameter()]
+    [switch]$Offline
 )
 
 Set-StrictMode -Version 1
+
+if ($Offline -and -not $CacheDirectory) {
+    throw 'The -Offline switch requires -CacheDirectory.'
+}
 
 $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 
@@ -19,7 +27,7 @@ Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestSources.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestRenderer.psm1"
-$allFonts = Get-AllFontDeclarations
+$allFonts = Get-AllFontDeclarations -CacheDirectory $CacheDirectory -Offline:$Offline
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
@@ -83,7 +91,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         $headers = New-GitHubHeaders
 
         $originRepo = if ( $null -eq $var.Origin ) { $var.Repo } else { $var.Origin }
-        $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -RateLimitState $rateLimitState -FallbackLicense $var.License
+        $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -RateLimitState $rateLimitState -FallbackLicense $var.License -CacheDirectory $CacheDirectory -Offline:$Offline
         $repo = $metadata.Repo
         $license = $metadata.License
         if ($var.ContainsKey('License')) {
@@ -105,7 +113,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
         Write-Host "license: $license"
 
         $useLatest = $var.ContainsKey('Latest') -and $var.Latest
-        $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases -RateLimitState $rateLimitState
+        $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases -RateLimitState $rateLimitState -CacheDirectory $CacheDirectory -Offline:$Offline
         if ($null -eq $release) {
             Write-Host "Failed to retrieve release info for repository $($var.Repo)" -ForegroundColor Red
             continue
@@ -174,7 +182,7 @@ foreach ($fontEntry in $allFonts.GetEnumerator()) {
             $versionUrl = $versionUrl -replace [regex]::Escape($cleanVersion), '$cleanVersion'
         }
 
-        $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes
+        $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes -CacheDirectory $CacheDirectory -Offline:$Offline
         if ($null -eq $hash) {
             Write-Host "Failed to download file from $downloadUrl" -ForegroundColor Red
             continue
