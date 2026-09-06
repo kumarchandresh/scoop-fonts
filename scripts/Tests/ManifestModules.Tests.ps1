@@ -400,20 +400,40 @@ Describe 'Generated bucket manifests' {
         $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
         $files = @(Get-ChildItem $bucketDir -Filter '*.json')
         $files.Count | Should -BeGreaterThan 0
+
+        $requiredProperties = @('version', 'homepage', 'license', 'url', 'hash', 'installer', 'uninstaller', 'checkver', 'autoupdate')
+        $failures = [System.Collections.Generic.List[string]]::new()
+
         foreach ($file in $files) {
-            $manifest = Get-Content $file.FullName -Raw | ConvertFrom-Json
-            foreach ($property in @('version', 'homepage', 'license', 'url', 'hash', 'installer', 'uninstaller', 'checkver', 'autoupdate')) {
-                (@($manifest.PSObject.Properties.Name) -contains $property) | Should -Be $true
+            $manifest = [System.IO.File]::ReadAllText($file.FullName) | ConvertFrom-Json
+            foreach ($property in $requiredProperties) {
+                if ($null -eq $manifest.$property) {
+                    $failures.Add("$($file.Name): missing property '$property'")
+                }
             }
-            if ($null -ne $manifest.description) {
-                $manifest.description | Should -Not -BeNullOrEmpty
+            if ($null -ne $manifest.description -and [string]::IsNullOrEmpty($manifest.description)) {
+                $failures.Add("$($file.Name): description is empty")
             }
-            $manifest.url | Should -Match '^https?://'
-            $manifest.hash | Should -Match '^[0-9a-f]{64}$'
-            $manifest.checkver.regex | Should -Not -BeNullOrEmpty
-            $manifest.autoupdate.url | Should -Not -BeNullOrEmpty
-            @($manifest.installer.script).Count | Should -BeGreaterThan 1
-            @($manifest.uninstaller.script).Count | Should -BeGreaterThan 1
+            if ($manifest.url -notmatch '^https?://') {
+                $failures.Add("$($file.Name): invalid url '$($manifest.url)'")
+            }
+            if ($manifest.hash -notmatch '^[0-9a-f]{64}$') {
+                $failures.Add("$($file.Name): invalid hash '$($manifest.hash)'")
+            }
+            if ([string]::IsNullOrEmpty($manifest.checkver.regex)) {
+                $failures.Add("$($file.Name): missing checkver.regex")
+            }
+            if ([string]::IsNullOrEmpty($manifest.autoupdate.url)) {
+                $failures.Add("$($file.Name): missing autoupdate.url")
+            }
+            if (@($manifest.installer.script).Count -le 1) {
+                $failures.Add("$($file.Name): installer script has <= 1 line")
+            }
+            if (@($manifest.uninstaller.script).Count -le 1) {
+                $failures.Add("$($file.Name): uninstaller script has <= 1 line")
+            }
         }
+
+        ($failures -join "`n") | Should -BeNullOrEmpty
     }
 }
