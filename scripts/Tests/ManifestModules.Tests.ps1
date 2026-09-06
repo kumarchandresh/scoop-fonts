@@ -98,6 +98,7 @@ Describe 'Manifest inventory' {
         try {
             Test-ManifestInventory -Declarations ([ordered]@{ Managed = @{} }) -BucketDir $bucket -DeprecatedDir $deprecated -Clean
             Test-Path (Join-Path $deprecated 'Unmanaged.json') | Should -Be $true
+            Test-Path (Join-Path $bucket 'Unmanaged.json') | Should -Be $false
         } finally {
             Remove-Item -Recurse -Force $root
         }

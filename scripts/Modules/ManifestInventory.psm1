@@ -14,7 +14,8 @@ function Test-ManifestInventory {
         if (-not $Declarations.Contains($_.BaseName)) {
             if ($Clean) {
                 Write-Host "unmanaged manifest deprecated: $($_.BaseName)" -ForegroundColor Yellow
-                Copy-Item -Path $_.FullName -Destination (Join-Path $DeprecatedDir "$($_.BaseName).json")
+                Copy-Item -Path $_.FullName -Destination (Join-Path $DeprecatedDir "$($_.BaseName).json") -Force
+                Remove-Item -LiteralPath $_.FullName -Force
             } else {
                 Write-Host "unmanaged manifest detected: $($_.BaseName)" -ForegroundColor DarkGray
             }
