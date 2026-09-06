@@ -58,16 +58,6 @@ function Get-IosevkaFonts {
         }
     }
 
-    # $manifests.GetEnumerator() | ForEach-Object {
-    #     [PSCustomObject]@{
-    #         Name   = $_.Value.Name
-    #         Repo   = $_.Value.Repo
-    #         Regex  = $_.Value.Regex
-    #         Filter = $_.Value.Filter
-    #     }
-    # }
-    # exit 0
-
     return $manifests
 }
 

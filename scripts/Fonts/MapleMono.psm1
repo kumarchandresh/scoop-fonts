@@ -16,16 +16,5 @@ function Get-MapleMonoFonts {
         }
     }
 
-    # $manifests.GetEnumerator() | ForEach-Object {
-    #     [PSCustomObject]@{
-    #         Name   = $_.Key
-    #         Repo   = $_.Value.Repo
-    #         Regex  = $_.Value.Regex
-    #         Filter = $_.Value.Filter
-    #         Desc   = $_.Value.Desc
-    #     }
-    # }
-    # exit 0
-
     return $manifests
 }
