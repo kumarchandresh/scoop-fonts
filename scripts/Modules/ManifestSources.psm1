@@ -225,10 +225,14 @@ function Get-ManifestArtifactHash {
     } else {
         Join-Path ${env:TEMP} "v$cleanVer-$name"
     }
-    if (-not (Test-Path $outfile)) {
-        if ($Offline) {
-            return $null
+    if ($CacheDirectory) {
+        if (-not (Test-Path $outfile)) {
+            if ($Offline) {
+                return $null
+            }
+            Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
         }
+    } else {
         Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $outfile
     }
     if (-not (Test-Path $outfile)) {
