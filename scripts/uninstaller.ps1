@@ -6,7 +6,7 @@ $regKey = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
 
 $files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -match $filter }
 if ($files.Count -eq 0) {
-    Write-Error 'Failed to find fonts to install. Please recheck the filter.' -ErrorAction Stop
+    Write-Error 'Failed to find fonts to uninstall. Please recheck the filter.' -ErrorAction Stop
 }
 
 $fonts = @()
