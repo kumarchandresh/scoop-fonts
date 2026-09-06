@@ -61,3 +61,26 @@ Describe 'Static source declarations' {
         (Get-MonaspaceFonts).Count | Should Be 24
     }
 }
+
+Describe 'Generated bucket manifests' {
+    It 'contains structurally valid Scoop manifests' {
+        $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
+        $files = @(Get-ChildItem $bucketDir -Filter '*.json')
+        $files.Count | Should BeGreaterThan 0
+        foreach ($file in $files) {
+            $manifest = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            foreach ($property in @('version', 'homepage', 'license', 'url', 'hash', 'installer', 'uninstaller', 'checkver', 'autoupdate')) {
+                (@($manifest.PSObject.Properties.Name) -contains $property) | Should Be $true
+            }
+            if ($null -ne $manifest.description) {
+                $manifest.description | Should Not BeNullOrEmpty
+            }
+            $manifest.url | Should Match '^https?://'
+            $manifest.hash | Should Match '^[0-9a-f]{64}$'
+            $manifest.checkver.regex | Should Not BeNullOrEmpty
+            $manifest.autoupdate.url | Should Not BeNullOrEmpty
+            @($manifest.installer.script).Count | Should BeGreaterThan 1
+            @($manifest.uninstaller.script).Count | Should BeGreaterThan 1
+        }
+    }
+}
