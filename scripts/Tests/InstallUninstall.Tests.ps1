@@ -90,11 +90,6 @@ Describe 'Installer failure handling' {
             throw "Manifest file not found: $sampleManifestPath"
         }
         $manifest = Get-Content $sampleManifestPath -Raw | ConvertFrom-Json
-        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''' -and $matches[1] -ne '\.[ot]tf$') {
-            $matches[1]
-        } else {
-            "^$($sampleName -replace '-(OTF|TTF|Variable|unhinted).*$', '')"
-        }
 
         $testAppName = "TestFilterMismatch-$sampleName"
         $tempManifestPath = Join-Path $env:TEMP "$testAppName.json"
@@ -108,6 +103,8 @@ Describe 'Installer failure handling' {
         # Tamper installer filter in memory to an impossible pattern
         $manifest.installer.script[0] = '$filter = ''^NonExistentPattern.*\.ttf$'''
         $manifest | ConvertTo-Json -Depth 10 | Set-Content $tempManifestPath -Encoding utf8
+
+        $beforeCount = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue).Count
 
         try {
             $scoopFailed = $false
@@ -126,8 +123,7 @@ Describe 'Installer failure handling' {
             $scoopFailed | Should -Be $true
             $allOutput | Should -Match 'Failed to find fonts to install\. Please recheck the filter\.'
 
-            $installedFonts = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex })
-            $installedFonts.Count | Should -Be 0
+            @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue).Count | Should -Be $beforeCount
         } finally {
             & scoop uninstall "$testAppName" 2>&1 | Out-Null
             Remove-Item $tempManifestPath -Force -ErrorAction SilentlyContinue
