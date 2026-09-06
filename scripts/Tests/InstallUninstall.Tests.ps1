@@ -1,16 +1,20 @@
 $runIntegration = $env:RUN_FONT_INTEGRATION_TESTS -eq '1'
 $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
 $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
+$fontsDir = Join-Path $PSScriptRoot '..\Fonts' -Resolve
 
 $targetManifests = @()
 if ($env:FONT_INTEGRATION_MODULE) {
-    $moduleFile = Join-Path $modulesDir "$($env:FONT_INTEGRATION_MODULE).psm1"
+    $moduleFile = Join-Path $fontsDir "$($env:FONT_INTEGRATION_MODULE).psm1"
     if (-not (Test-Path $moduleFile)) {
-        $availableModules = @(Get-ChildItem $modulesDir -Filter '*.psm1' | Where-Object { $_.BaseName -notmatch '^(Manifest|ScoopArtifactCache)' } | ForEach-Object { $_.BaseName })
+        $availableModules = @(Get-ChildItem $fontsDir -Filter '*.psm1' | ForEach-Object { $_.BaseName })
         throw "Specified integration module not found: '$($env:FONT_INTEGRATION_MODULE)'. Available font modules: $($availableModules -join ', '). If you intended to test the font manifest '$($env:FONT_INTEGRATION_MODULE)', use `$env:FONT_INTEGRATION_MANIFEST instead."
     }
     Import-Module $moduleFile -Force
     $fn = "Get-$($env:FONT_INTEGRATION_MODULE)Fonts"
+    if (-not (Get-Command -Name $fn -ErrorAction SilentlyContinue)) {
+        $fn = "Get-$($env:FONT_INTEGRATION_MODULE)"
+    }
     $declarations = & $fn
     $targetManifests = @($declarations.Keys)
 } elseif ($env:FONT_INTEGRATION_MANIFEST) {

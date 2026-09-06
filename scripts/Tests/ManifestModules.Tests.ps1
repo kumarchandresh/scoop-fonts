@@ -1,16 +1,13 @@
 $modulesDir = Join-Path $PSScriptRoot '..\Modules' -Resolve
+$fontsDir = Join-Path $PSScriptRoot '..\Fonts' -Resolve
 Import-Module (Join-Path $modulesDir 'ManifestSources.psm1') -Force
 Import-Module (Join-Path $modulesDir 'ManifestRenderer.psm1') -Force
 Import-Module (Join-Path $modulesDir 'ManifestInventory.psm1') -Force
 Import-Module (Join-Path $modulesDir 'ScoopArtifactCache.psm1') -Force
-Import-Module (Join-Path $modulesDir 'IBMPlex.psm1') -Force
-Import-Module (Join-Path $modulesDir 'Iosevka.psm1') -Force
-Import-Module (Join-Path $modulesDir 'MapleMono.psm1') -Force
-Import-Module (Join-Path $modulesDir 'Monaspace.psm1') -Force
 Import-Module (Join-Path $modulesDir 'ManifestDeclarations.psm1') -Force
-Import-Module (Join-Path $modulesDir 'NerdFonts.psm1') -Force
-Import-Module (Join-Path $modulesDir 'JetBrainsMono.psm1') -Force
-Import-Module (Join-Path $modulesDir 'CascadiaCode.psm1') -Force
+Import-Module (Join-Path $fontsDir 'NerdFonts.psm1') -Force
+Import-Module (Join-Path $fontsDir 'JetBrainsMono.psm1') -Force
+Import-Module (Join-Path $fontsDir 'CascadiaCode.psm1') -Force
 
 Describe 'Manifest source helpers' {
     It 'selects matching assets for latest and release-list responses' {
@@ -212,12 +209,7 @@ Describe 'Nerd Fonts catalog mapping' {
     }
 }
 
-Import-Module (Join-Path $modulesDir '0xType.psm1') -Force
-Import-Module (Join-Path $modulesDir 'FiraCode.psm1') -Force
-Import-Module (Join-Path $modulesDir 'Geist.psm1') -Force
-Import-Module (Join-Path $modulesDir 'GoogleSansCode.psm1') -Force
-Import-Module (Join-Path $modulesDir 'IntelOneMono.psm1') -Force
-Import-Module (Join-Path $modulesDir 'MonaSans.psm1') -Force
+Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | ForEach-Object { Import-Module $_.FullName -Force }
 
 Describe 'Static source declarations' {
     It 'preserves the current migrated descriptor counts' {
@@ -228,11 +220,15 @@ Describe 'Static source declarations' {
     }
 
     It 'ensures all 484 static declarations map to an existing bucket manifest' {
-        $modules = @('0xType', 'CascadiaCode', 'FiraCode', 'Geist', 'GoogleSansCode', 'IBMPlex', 'IntelOneMono', 'Iosevka', 'JetBrainsMono', 'MapleMono', 'MonaSans', 'Monaspace')
+        $fontsDir = Join-Path $PSScriptRoot '..\Fonts' -Resolve
+        $fontModules = @(Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | Where-Object { $_.BaseName -ne 'NerdFonts' } | Sort-Object Name)
         $bucketDir = Join-Path $PSScriptRoot '..\..\bucket' -Resolve
         $total = 0
-        foreach ($m in $modules) {
-            $fn = "Get-${m}Fonts"
+        foreach ($m in $fontModules) {
+            $fn = "Get-$($m.BaseName)Fonts"
+            if (-not (Get-Command -Name $fn -ErrorAction SilentlyContinue)) {
+                $fn = "Get-$($m.BaseName)"
+            }
             $decls = & $fn
             $total += $decls.Count
             foreach ($k in $decls.Keys) {

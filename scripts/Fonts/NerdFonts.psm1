@@ -4,7 +4,14 @@ function Get-NerdFonts {
         $Catalog
     )
 
-    $fonts = if ($Catalog) { $Catalog } else { Get-NerdFontsCatalog }
+    $fonts = if ($Catalog) {
+        $Catalog
+    } else {
+        if (-not (Get-Command -Name Get-NerdFontsCatalog -ErrorAction SilentlyContinue)) {
+            Import-Module (Join-Path $PSScriptRoot '..\Modules\ManifestSources.psm1' -Resolve) -Force
+        }
+        Get-NerdFontsCatalog
+    }
     $manifests = [ordered]@{}
     foreach ($font in $fonts) {
         $folderName = $font.folderName
