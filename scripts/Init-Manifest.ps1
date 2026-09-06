@@ -15,46 +15,8 @@ Set-StrictMode -Version 1
 
 $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 
-$allFonts = [ordered]@{}
-
-Import-Module -Force "$PSScriptRoot\Modules\0xType.psm1"
-(Get-0xTypeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\CascadiaCode.psm1"
-(Get-CascadiaCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\FiraCode.psm1"
-(Get-FiraCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\Geist.psm1"
-(Get-GeistFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\GoogleSansCode.psm1"
-(Get-GoogleSansCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\IBMPlex.psm1"
-(Get-IBMPlexFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\IntelOneMono.psm1"
-(Get-IntelOneMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
-(Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\JetbrainsMono.psm1"
-(Get-JetBrainsMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
-(Get-MapleMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\MonaSans.psm1"
-(Get-MonaSansFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\Monaspace.psm1"
-(Get-MonaspaceFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
-(Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
+$allFonts = Get-AllFontDeclarations
 
 Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
     if (-not $allFonts.Contains($_.BaseName)) {
