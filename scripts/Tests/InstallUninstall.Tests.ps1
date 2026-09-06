@@ -45,17 +45,16 @@ Describe 'Generated font manifest installation' {
             throw "Manifest file not found: $manifestPath"
         }
         $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
-        $filterRegex = if ($manifest.installer.script[0] -match '^\$filter\s*=\s*''([^'']+)''' -and $matches[1] -ne '\.[ot]tf$') {
-            $matches[1]
-        } else {
-            "^$($ManifestName -replace '-(OTF|TTF|Variable|unhinted).*$', '')"
+
+        $beforeFiles = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+
+        $baseName = ($ManifestName -replace '-(OTF|TTF|Variable|unhinted).*$', '')
+        $preExisting = @($beforeFiles | Where-Object { $_ -match "^$baseName" })
+        if ($preExisting.Count -ne 0) {
+            throw "Cannot run integration test because matching fonts are already installed: $($preExisting -join ', ')"
         }
 
-        $before = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex })
-        if ($before.Count -ne 0) {
-            throw "Cannot run integration test because matching fonts are already installed: $($before.Name -join ', ')"
-        }
-
+        $addedFiles = @()
         try {
             $scoopCachePath = Initialize-ScoopArtifactCache -App $ManifestName -Version $manifest.version -DownloadUrl $manifest.url -ExpectedHash $manifest.hash
             Write-Host "Initialized Scoop cache: $scoopCachePath"
@@ -64,13 +63,16 @@ Describe 'Generated font manifest installation' {
                 throw "scoop install failed with exit code $LASTEXITCODE"
             }
 
-            $installed = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex })
-            $installed.Count | Should -BeGreaterThan 0
+            $afterInstall = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+            $addedFiles = @($afterInstall | Where-Object { $_ -notin $beforeFiles })
+            $addedFiles.Count | Should -BeGreaterThan 0
         } finally {
             & scoop uninstall "$ManifestName"
         }
 
-        @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex }).Count | Should -Be 0
+        $afterUninstall = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+        $remaining = @($afterUninstall | Where-Object { $_ -in $addedFiles })
+        $remaining.Count | Should -Be 0
     }
 }
 
