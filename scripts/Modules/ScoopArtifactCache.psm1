@@ -50,7 +50,7 @@ function Test-ArtifactHash {
     return ((Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash -eq $ExpectedHash)
 }
 
-function Seed-ScoopArtifactCache {
+function Initialize-ScoopArtifactCache {
     param(
         [Parameter(Mandatory)]
         [string]$App,
