@@ -102,14 +102,20 @@ Describe 'Installer failure handling' {
         $manifest | ConvertTo-Json -Depth 10 | Set-Content $tempManifestPath -Encoding utf8
 
         try {
+            $scoopFailed = $false
             $errorOutput = $null
             try {
                 $output = & scoop install "$tempManifestPath" --no-update-scoop 2>&1
+                if (-not $? -or $LASTEXITCODE -ne 0) {
+                    $scoopFailed = $true
+                }
             } catch {
+                $scoopFailed = $true
                 $errorOutput = $_.ToString()
             }
             $allOutput = (@($output) + @($errorOutput)) -join "`n"
 
+            $scoopFailed | Should -Be $true
             $allOutput | Should -Match 'Failed to find fonts to install\. Please recheck the filter\.'
 
             $installedFonts = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match $filterRegex })
