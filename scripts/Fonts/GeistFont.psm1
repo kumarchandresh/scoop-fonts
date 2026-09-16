@@ -20,6 +20,7 @@ function Get-GeistFontResources {
                 Filter = '\.[ot]tf$'
                 Latest = $true
                 Dir    = "geist-font/$variant/$($pkg.Dir)"
+                Desc   = 'A typeface designed by Vercel for developers and designers.'
             }
         }
     }
