@@ -64,20 +64,51 @@ Describe 'Manifest source helpers' {
 }
 
 Describe 'Manifest renderer' {
+    It 'resolves version info for single capture group' {
+        $info = Get-ManifestVersionInfo -Regex '/v?([\d.]+)/font-[\d.]+\.zip' -DownloadUrl 'https://example.test/v1.2.3/font-1.2.3.zip'
+        $info.Version | Should -Be '1.2.3'
+        $info.VersionUrl | Should -Be 'https://example.test/v$version/font-$version.zip'
+        $info.CheckverReplace | Should -BeNullOrEmpty
+    }
+
+    It 'generates composite version and replace pattern for multiple capture groups without explicit Version' {
+        $info = Get-ManifestVersionInfo -Regex '/v?([\d.]+)-build(\d+)/font\.zip' -DownloadUrl 'https://example.test/v1.2-build34/font.zip'
+        $info.Version | Should -Be '1.2.34'
+        $info.VersionUrl | Should -Be 'https://example.test/v$match1-build$match2/font.zip'
+        $info.CheckverReplace | Should -Be '${1}.${2}'
+    }
+
+    It 'uses explicit declaration Version template when multiple capture groups are present' {
+        $info = Get-ManifestVersionInfo -Regex '/v?([\d.]+)-build(\d+)/font\.zip' -DownloadUrl 'https://example.test/v1.2-build34/font.zip' -VersionTemplate '${1}_b${2}'
+        $info.Version | Should -Be '1.2_b34'
+        $info.VersionUrl | Should -Be 'https://example.test/v$match1-build$match2/font.zip'
+        $info.CheckverReplace | Should -Be '${1}_b${2}'
+    }
+
+    It 'returns null when download url does not match regex' {
+        $info = Get-ManifestVersionInfo -Regex '/v?([\d.]+)/font\.zip' -DownloadUrl 'https://example.test/other-file.zip'
+        $info | Should -BeNullOrEmpty
+    }
+
     It 'preserves the generated manifest contract' {
         $declaration = @{ Repo = 'example/repo'; Filter = 'Font-.*\.ttf$'; Regex = '/v?([\d.]+)/font-[\d.]+\.zip'; Dir = 'fonts' }
-        $match = [regex]::new($declaration.Regex).Match('/v1.2/font-1.2.zip')
+        $versionInfo = [PSCustomObject]@{
+            Version         = '1.2'
+            VersionUrl      = 'https://example.test/font-$version.zip'
+            CheckverReplace = $null
+        }
+        $release = @{
+            Url      = 'https://api.github.com/repos/example/repo/releases'
+            JsonPath = '$[*].assets[*].browser_download_url'
+        }
         $manifestParams = @{
             Declaration      = $declaration
-            Version          = '1.2'
+            VersionInfo      = $versionInfo
+            Release          = $release
             Description      = 'Example'
             License          = 'OFL-1.1'
             Hash             = ('a' * 64)
             DownloadUrl      = 'https://example.test/font-1.2.zip'
-            ReleaseUrl       = 'https://api.github.com/repos/example/repo/releases'
-            JsonPath         = '$[*].assets[*].browser_download_url'
-            VersionUrl       = 'https://example.test/font-$version.zip'
-            Match            = $match
             InstallerLines   = @('install-line')
             UninstallerLines = @('uninstall-line')
         }
@@ -85,48 +116,34 @@ Describe 'Manifest renderer' {
         @($manifest.Keys) -join ',' | Should -Be 'version,description,homepage,license,url,hash,extract_dir,installer,uninstaller,checkver,autoupdate'
         $manifest.installer.script.Count | Should -Be 2
         $manifest.uninstaller.script.Count | Should -Be 2
+        $manifest.checkver.Contains('replace') | Should -Be $false
     }
 
-    It 'generates composite checkver replace pattern for multiple capture groups without explicit Version' {
-        $declaration = @{ Repo = 'example/repo'; Filter = '\.ttf$'; Regex = '/v?([\d.]+)-build(\d+)/font\.zip'; Dir = 'fonts' }
-        $match = [regex]::new($declaration.Regex).Match('/v1.2-build34/font.zip')
+    It 'includes checkver replace when CheckverReplace is present' {
+        $declaration = @{ Repo = 'example/repo'; Filter = 'Font-.*\.ttf$'; Regex = '/v?([\d.]+)-build(\d+)/font\.zip' }
+        $versionInfo = [PSCustomObject]@{
+            Version         = '1.2.34'
+            VersionUrl      = 'https://example.test/font-$match1-build$match2.zip'
+            CheckverReplace = '${1}.${2}'
+        }
+        $release = @{
+            Url      = 'https://api.github.com/repos/example/repo/releases'
+            JsonPath = '$.url'
+        }
         $manifestParams = @{
             Declaration      = $declaration
-            Version          = '1.2.34'
+            VersionInfo      = $versionInfo
+            Release          = $release
             Description      = 'Example'
             License          = 'MIT'
             Hash             = ('a' * 64)
             DownloadUrl      = 'https://example.test/font.zip'
-            ReleaseUrl       = 'https://api.github.com'
-            JsonPath         = '$.url'
-            VersionUrl       = 'https://example.test/font.zip'
-            Match            = $match
             InstallerLines   = @('i')
             UninstallerLines = @('u')
         }
         $manifest = New-ScoopManifest @manifestParams
         $manifest.checkver.replace | Should -Be '${1}.${2}'
-    }
-
-    It 'uses explicit declaration Version template when multiple capture groups are present' {
-        $declaration = @{ Repo = 'example/repo'; Filter = '\.ttf$'; Regex = '/v?([\d.]+)-build(\d+)/font\.zip'; Version = '${1}_b${2}'; Dir = 'fonts' }
-        $match = [regex]::new($declaration.Regex).Match('/v1.2-build34/font.zip')
-        $manifestParams = @{
-            Declaration      = $declaration
-            Version          = '1.2_b34'
-            Description      = 'Example'
-            License          = 'MIT'
-            Hash             = ('a' * 64)
-            DownloadUrl      = 'https://example.test/font.zip'
-            ReleaseUrl       = 'https://api.github.com'
-            JsonPath         = '$.url'
-            VersionUrl       = 'https://example.test/font.zip'
-            Match            = $match
-            InstallerLines   = @('i')
-            UninstallerLines = @('u')
-        }
-        $manifest = New-ScoopManifest @manifestParams
-        $manifest.checkver.replace | Should -Be '${1}_b${2}'
+        $manifest.Contains('extract_dir') | Should -Be $false
     }
 }
 

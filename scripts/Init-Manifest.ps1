@@ -129,57 +129,13 @@ try {
             }
             Write-Host "url: $downloadUrl"
 
-            $regex = [regex]::new($var.Regex)
-            $match = $regex.Match($downloadUrl)
-
-            # Handle multiple capture groups for complex versioning schemes
-            if ($match.Success -and $match.Groups.Count -gt 1) {
-                if ($match.Groups.Count -gt 2) {
-                    # Multiple capture groups - create composite version from all available groups
-                    if ($null -ne $var.Version) {
-                        $version = $var.Version
-                        for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                            $version = $version -replace [regex]::Escape('${' + $match.Groups[$i].Name + '}'), $match.Groups[$i].Value
-                        }
-                    } else {
-                        $versionParts = @()
-                        for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                            $versionParts += $match.Groups[$i].Value
-                        }
-                        $version = $versionParts -join '.'
-                    }
-                } else {
-                    # Single capture group - use it as version
-                    $version = $match.Groups[1].Value
-                }
-            } else {
-                $version = $null
-            }
-
-            if ($null -eq $version) {
+            $versionInfo = Get-ManifestVersionInfo -Regex $var.Regex -DownloadUrl $downloadUrl -VersionTemplate $var.Version
+            if ($null -eq $versionInfo) {
                 Add-ManifestFailure -Name $var.Name -Stage 'Version' -Reason "Failed to retrieve version info for $($var.Repo)"
                 continue
             }
+            $version = $versionInfo.Version
             Write-Host "version: $version"
-
-            # Generate autoupdate URL with appropriate variable substitutions
-            if ($match.Groups.Count -gt 2) {
-                # Multiple capture groups - replace each group with $match1, $match2, etc.
-                $versionUrl = $downloadUrl
-                for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                    $groupValue = $match.Groups[$i].Value
-                    $versionUrl = $versionUrl -replace [regex]::Escape($groupValue), "`$match$i"
-                }
-            } else {
-                $underscoreVersion = $version -replace [regex]::Escape('.'), '_'
-                $dashVersion = $version -replace [regex]::Escape('.'), '-'
-                $cleanVersion = $version -replace [regex]::Escape('.'), ''
-                # Single capture group - use standard version variables
-                $versionUrl = $downloadUrl -replace [regex]::Escape($version), '$version'
-                $versionUrl = $versionUrl -replace [regex]::Escape($underscoreVersion), '$underscoreVersion'
-                $versionUrl = $versionUrl -replace [regex]::Escape($dashVersion), '$dashVersion'
-                $versionUrl = $versionUrl -replace [regex]::Escape($cleanVersion), '$cleanVersion'
-            }
 
             $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes
             if ($null -eq $hash) {
@@ -190,25 +146,18 @@ try {
 
             $manifestParams = @{
                 Declaration      = $var
-                Version          = $version
+                VersionInfo      = $versionInfo
+                Release          = $release
                 Description      = $description
                 License          = $license
                 Hash             = $hash
                 DownloadUrl      = $downloadUrl
-                ReleaseUrl       = $releaseUrl
-                JsonPath         = $jsonPath
-                VersionUrl       = $versionUrl
-                Match            = $match
                 InstallerLines   = $installerLines
                 UninstallerLines = $uninstallerLines
             }
             $manifest = New-ScoopManifest @manifestParams
 
-            $cleanManifest = [ordered]@{}
-            $manifest.GetEnumerator() | Where-Object { $null -ne $_.Value } | ForEach-Object {
-                $cleanManifest[$_.Key] = $_.Value
-            }
-            ConvertTo-Json $cleanManifest | Out-File -Encoding utf8 -FilePath $file
+            ConvertTo-Json $manifest | Out-File -Encoding utf8 -FilePath $file
 
             $app = [System.IO.Path]::GetFileNameWithoutExtension($file)
 
@@ -220,7 +169,7 @@ try {
         }
     }
 } finally {
-    # Disable-ScoopGitHubAuthForCheckver $scoopAuth
+    Disable-ScoopGitHubAuthForCheckver $scoopAuth
 }
 
 Show-GitHubRateLimit
