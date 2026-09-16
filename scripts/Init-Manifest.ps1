@@ -2,6 +2,8 @@ param (
     [Parameter(Position = 0)]
     [string[]]$Fonts, # regexes
     [Parameter()]
+    [string[]]$Module,
+    [Parameter()]
     [switch]$Force,
     [Parameter()]
     [switch]$NoNerdFont,
@@ -60,12 +62,16 @@ try {
         $var = $fontEntry.Value
         $var.Name = $fontEntry.Key
 
-        if (-not $var.ContainsKey('Filter')) {
-            Add-ManifestFailure -Name $var.Name -Stage 'Declaration' -Reason 'Missing Filter property'
+        if ($Module -and $Module.Count -ne 0 -and $Module.Where({ $var.ContainsKey('Module') -and ($var.Module -match "^$([regex]::Escape($_))$" -or $var.Module -match $_) }).Count -eq 0) {
             continue
         }
 
-        if ($Fonts.Count -ne 0 -and $Fonts.Where({ $var.Name -match $_ }).Count -eq 0) {
+        if ($Fonts.Count -ne 0 -and $Fonts.Where({ $var.Name -match $_ -or ($var.ContainsKey('Module') -and $var.Module -match "^$([regex]::Escape($_))$") }).Count -eq 0) {
+            continue
+        }
+
+        if (-not $var.ContainsKey('Filter')) {
+            Add-ManifestFailure -Name $var.Name -Stage 'Declaration' -Reason 'Missing Filter property'
             continue
         }
 
