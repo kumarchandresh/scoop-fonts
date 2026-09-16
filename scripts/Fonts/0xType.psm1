@@ -1,14 +1,14 @@
 function Get-0xTypeResources {
     $manifests = [ordered]@{
-        '0xProto'          = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = "^0xProto-\w+\.ttf$" }
-        '0xProto-OTF'      = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = "^0xProto-\w+\.otf$" }
-        '0xProtoNL'        = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.ttf$'; Dir = 'No-Ligatures' }
-        '0xProtoNL-OTF'    = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.otf$'; Dir = 'No-Ligatures' }
-        'ZxProto'          = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.ttf' ; Dir = 'ZxProto' }
-        'ZxProto-OTF'      = @{Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.otf' ; Dir = 'ZxProto' }
-        'ZxGamut'          = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = 'ZxGamut-.*\.ttf$'; Dir = 'static'; Latest = $true }
-        'ZxGamut-OTF'      = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = 'ZxGamut-.*\.otf$'; Dir = 'static'; Latest = $true }
-        'ZxGamut-Variable' = @{Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/.*\.zip'; Filter = '\.ttf$'; Dir = 'variable'; Latest = $true }
+        '0xProto'          = @{ Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = "^[^\\]+\.ttf$"; Latest = $true; Dir = 'fonts' }
+        '0xProto-OTF'      = @{ Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = "^[^\\]+\.otf$"; Latest = $true; Dir = 'fonts' }
+        '0xProtoNL'        = @{ Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.ttf$'; Latest = $true; Dir = 'fonts\No-Ligatures' }
+        '0xProtoNL-OTF'    = @{ Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.otf$'; Latest = $true; Dir = 'fonts\No-Ligatures' }
+        'ZxProto'          = @{ Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.ttf$'; Latest = $true; Dir = 'fonts\ZxProto' }
+        'ZxProto-OTF'      = @{ Repo = '0xType/0xProto'; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.otf$'; Latest = $true; Dir = 'fonts\ZxProto' }
+        'ZxGamut'          = @{ Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.ttf$'; Latest = $true; Dir = 'static' }
+        'ZxGamut-OTF'      = @{ Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.otf$'; Latest = $true; Dir = 'static' }
+        'ZxGamut-Variable' = @{ Repo = '0xType/Gamut'  ; Regex = '/v?([\d.]+)/[^/]+\.zip'; Filter = '^[^\\]+\.ttf$'; Latest = $true; Dir = 'variable' }
     }
     return $manifests
 }
