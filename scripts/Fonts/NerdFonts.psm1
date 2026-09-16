@@ -1,7 +1,9 @@
 function Get-NerdFontsResources {
     param(
         [Parameter()]
-        $Catalog
+        $Catalog,
+        [Parameter()]
+        [switch]$Force
     )
 
     $fonts = if ($Catalog) {
@@ -10,7 +12,7 @@ function Get-NerdFontsResources {
         if (-not (Get-Command -Name Get-NerdFontsCatalog -ErrorAction SilentlyContinue)) {
             Import-Module (Join-Path $PSScriptRoot '..\Modules\ManifestSources.psm1' -Resolve) -Force
         }
-        Get-NerdFontsCatalog
+        Get-NerdFontsCatalog -Force:$Force
     }
     $flavorOverrides = @{
         'Arimo'                = { param($p) @(@{ patchedName = $p; variants = @('', 'Propo') }) }
@@ -111,7 +113,6 @@ function Get-NerdFontsResources {
                 $fontName = "${patchedName}NerdFont${variant}"
                 $fontRegex = [regex]::Escape($fontName)
                 $manifests[$fontName] = @{
-                    Name    = $fontName
                     Repo    = 'ryanoasis/nerd-fonts'
                     Regex   = "/v?([\d.]+)/${folderRegex}\.tar\.xz"
                     Filter  = "${fontRegex}-.*\.[ot]tf$"

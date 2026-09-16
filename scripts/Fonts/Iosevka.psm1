@@ -1,9 +1,20 @@
 function Get-IosevkaResources {
     $manifests = [ordered]@{}
     $fontNames = @(
-        'Iosevka', 'IosevkaCurly', 'IosevkaCurlySlab', 'IosevkaAile', 'IosevkaEtoile',
-        'IosevkaFixed', 'IosevkaFixedCurly', 'IosevkaFixedCurlySlab', 'IosevkaFixedSlab',
-        'IosevkaSlab', 'IosevkaTerm', 'IosevkaTermCurly', 'IosevkaTermCurlySlab', 'IosevkaTermSlab'
+        'Iosevka'
+        'IosevkaCurly'
+        'IosevkaCurlySlab'
+        'IosevkaAile'
+        'IosevkaEtoile'
+        'IosevkaFixed'
+        'IosevkaFixedCurly'
+        'IosevkaFixedCurlySlab'
+        'IosevkaFixedSlab'
+        'IosevkaSlab'
+        'IosevkaTerm'
+        'IosevkaTermCurly'
+        'IosevkaTermCurlySlab'
+        'IosevkaTermSlab'
     )
     foreach ($prefix in @('Iosevka', 'IosevkaFixed', 'IosevkaTerm')) {
         foreach ($style in 1..18) {
@@ -17,7 +28,6 @@ function Get-IosevkaResources {
             $suffix = $package[1]
             $name = "${fontName}${suffix}"
             $manifests[$name] = @{
-                Name   = $name
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/Pkg${prefix}-${fontName}-[\d.]+\.zip"
                 Filter = "${fontName}-.*\.ttf$"
@@ -35,7 +45,6 @@ function Get-IosevkaResources {
             $name = "${fontName}${suffix}"
             $filter = if ($sgr) { "SGr-${fontName}-.*\.ttc$" } else { "${fontName}-.*\.ttc$" }
             $manifests[$name] = @{
-                Name   = $name
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/${archivePrefix}-${fontName}-[\d.]+\.zip"
                 Filter = $filter
@@ -50,7 +59,6 @@ function Get-IosevkaResources {
             $archivePrefix = $package[1]
             $name = "${fontName}-${prefix}"
             $manifests[$name] = @{
-                Name   = $name
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/${archivePrefix}-${fontName}-[\d.]+\.zip"
                 Filter = "SGr-${fontName}-.*\.ttc$"

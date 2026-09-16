@@ -42,7 +42,6 @@ function Get-IBMPlexResources {
     foreach ($font in $plexFonts) {
         $fontRegex = "%40([\d.]+)/$($font.fileName)\.zip"
         $manifests[$font.fontName] = @{
-            Name   = $font.fontName
             Repo   = 'IBM/plex'
             Regex  = $fontRegex
             Filter = $font.filter

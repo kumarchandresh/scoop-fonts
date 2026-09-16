@@ -6,13 +6,26 @@ function Get-MonaspaceResources {
         frozen    = @{ dir = 'Frozen Fonts'  ; suffix = 'Frozen' }
     }
     $manifests = [ordered]@{}
-    foreach ($variant in @('static', 'variable', 'nerdfonts', 'frozen')) {
+    $variants = @(
+        'static'
+        'variable'
+        'nerdfonts'
+        'frozen'
+    )
+    $flavors = @(
+        'Argon'
+        'Krypton'
+        'Neon'
+        'Radon'
+        'Xenon'
+    )
+
+    foreach ($variant in $variants) {
         $suffix = $config[$variant].suffix
-        foreach ($flavor in @('Argon', 'Krypton', 'Neon', 'Radon', 'Xenon')) {
+        foreach ($flavor in $flavors) {
             $fontName = "Monaspace${flavor}$suffix"
             $name = $fontName -replace ' ', ''
             $manifests[$name] = @{
-                Name   = $name
                 Repo   = 'githubnext/monaspace'
                 Regex  = "/v?([\d.]+)/monaspace-${variant}-v?[\d.]+\.zip"
                 Filter = "\.[ot]tf$"
@@ -21,7 +34,6 @@ function Get-MonaspaceResources {
         }
         $fontName = "Monaspace${suffix}"
         $manifests[$fontName] = @{
-            Name   = $fontName
             Repo   = 'githubnext/monaspace'
             Regex  = "/v?([\d.]+)/monaspace-${variant}-v?[\d.]+\.zip"
             Filter = "\.[ot]tf$"
