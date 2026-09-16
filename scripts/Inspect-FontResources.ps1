@@ -10,18 +10,12 @@ param(
 Set-StrictMode -Version 1
 $ErrorActionPreference = 'Stop'
 
-$fontsDir = Join-Path $PSScriptRoot 'Fonts'
-$modules = @(Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | Sort-Object Name)
+Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
 
-if ($Module) {
-    $targetName = $Module -replace '\.psm1$', ''
-    $matched = @($modules | Where-Object { $_.BaseName -like "*$targetName*" })
-    if ($matched.Count -eq 0) {
-        $available = ($modules | ForEach-Object { $_.BaseName }) -join ', '
-        Write-Error "Font module '$Module' not found. Available modules: $available" -ErrorAction Stop
-    }
-    $modules = $matched
-} elseif (-not $All) {
+$fontsDir = Join-Path $PSScriptRoot 'Fonts'
+
+if (-not $Module -and -not $All) {
+    $modules = @(Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | Sort-Object Name)
     Write-Host "Available Font Modules:" -ForegroundColor Cyan
     foreach ($m in $modules) {
         Write-Host "  - $($m.BaseName)"
@@ -31,32 +25,27 @@ if ($Module) {
     return
 }
 
-$results = [System.Collections.Generic.List[PSCustomObject]]::new()
+$declarations = Get-AllFontDeclarations -FontsDirectory $fontsDir -ModuleFilter $Module
 
-foreach ($m in $modules) {
-    Import-Module -Force $m.FullName
-    $fnName = "Get-$($m.BaseName)Resources"
-    if (-not (Get-Command -Name $fnName -ErrorAction SilentlyContinue)) {
-        Write-Warning "No declaration function found in $($m.Name)"
+if ($Module -and $declarations.Count -eq 0) {
+    $available = (Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | ForEach-Object { $_.BaseName }) -join ', '
+    Write-Error "Font module '$Module' not found or has no declarations. Available modules: $available" -ErrorAction Stop
+}
+
+$results = [System.Collections.Generic.List[PSCustomObject]]::new()
+foreach ($entry in $declarations.GetEnumerator()) {
+    if ($Filter -and ($entry.Key -notmatch $Filter)) {
         continue
     }
-
-    $declarations = & $fnName
-    foreach ($entry in $declarations.GetEnumerator()) {
-        $name = $entry.Key
-        if ($Filter -and ($name -notmatch $Filter)) {
-            continue
-        }
-        $val = $entry.Value
-        $results.Add([PSCustomObject]@{
-                Module = $m.BaseName
-                Font   = $name
-                Repo   = $val.Repo
-                Regex  = $val.Regex
-                Filter = $val.Filter
-                Dir    = $val.Dir
-            })
-    }
+    $val = $entry.Value
+    $results.Add([PSCustomObject]@{
+            Module = $val.Module
+            Font   = $entry.Key
+            Repo   = $val.Repo
+            Regex  = $val.Regex
+            Filter = $val.Filter
+            Dir    = $val.Dir
+        })
 }
 
 if ($results.Count -gt 0) {
@@ -65,3 +54,4 @@ if ($results.Count -gt 0) {
 } else {
     Write-Host "No font resource declarations matched criteria." -ForegroundColor Yellow
 }
+

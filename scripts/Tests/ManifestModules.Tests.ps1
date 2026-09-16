@@ -267,6 +267,36 @@ Describe 'Nerd Fonts catalog mapping' {
         ($fonts.Contains('HackNerdFontMono')) | Should -Be $true
         ($fonts.Contains('HackNerdFontPropo')) | Should -Be $true
     }
+
+    It 'uses cached catalog from disk when available and fresh' {
+        $tempDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $tempDir | Out-Null
+        try {
+            $cachedPayload = @{
+                fonts = @(
+                    @{ folderName = 'TestFont'; patchedName = 'TestFont'; licenseId = 'OFL-1.1'; description = 'Test Font' }
+                )
+            }
+            $cacheFile = Join-Path $tempDir 'nerdfonts-catalog.json'
+            $cachedPayload | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $cacheFile
+
+            $catalog = Get-NerdFontsCatalog -CacheDirectory $tempDir
+            $catalog.Count | Should -Be 1
+            $catalog[0].folderName | Should -Be 'TestFont'
+        } finally {
+            Remove-Item -Recurse -Force -LiteralPath $tempDir -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+Describe 'Manifest declaration discovery' {
+    It 'filters declarations by module name and annotates module' {
+        $decls = Get-AllFontDeclarations -ModuleFilter 'CascadiaCode'
+        $decls.Count | Should -Be 12
+        ($decls.Contains('CascadiaCode')) | Should -Be $true
+        ($decls.Contains('0xProto')) | Should -Be $false
+        $decls['CascadiaCode'].Module | Should -Be 'CascadiaCode'
+    }
 }
 
 Get-ChildItem -LiteralPath $fontsDir -Filter '*.psm1' | ForEach-Object { Import-Module $_.FullName -Force }

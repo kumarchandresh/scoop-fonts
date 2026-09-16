@@ -20,7 +20,7 @@ Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
 Import-Module -Force "$PSScriptRoot\Modules\ManifestRenderer.psm1"
 
-$allFonts = Get-AllFontDeclarations
+$allFonts = Get-AllFontDeclarations -Force:$Force
 
 Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
@@ -30,8 +30,6 @@ $uninstallerLines = @(Get-Content "$PSScriptRoot\uninstaller.ps1" | Where-Object
 $cache = @{}
 $hashes = @{}
 $releases = @{}
-
-$rateLimitState = @{ LastApiCall = $null; ApiCallInterval = 500 }
 
 $formatjson = "$PSScriptRoot\..\bin\formatjson.ps1"
 
@@ -85,7 +83,7 @@ try {
             $headers = New-GitHubHeaders
 
             $originRepo = if ( $null -eq $var.Origin ) { $var.Repo } else { $var.Origin }
-            $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -RateLimitState $rateLimitState -FallbackLicense $var.License
+            $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -FallbackLicense $var.License
             $repo = $metadata.Repo
             $license = $metadata.License
             if ($var.ContainsKey('License')) {
@@ -107,7 +105,7 @@ try {
             Write-Host "license: $license"
 
             $useLatest = $var.ContainsKey('Latest') -and $var.Latest
-            $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases -RateLimitState $rateLimitState
+            $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases
             if ($null -eq $release) {
                 Add-ManifestFailure -Name $var.Name -Stage 'Release' -Reason "Failed to retrieve release info for repository $($var.Repo)"
                 continue

@@ -137,24 +137,38 @@ function Get-ManifestArtifactPath {
     return [System.IO.Path]::Combine($root, $owner, $repo, (ConvertTo-ManifestCachePathPart $Version), $fileName)
 }
 
+$script:LastApiCall = $null
+$script:ApiCallInterval = 500
+$script:NerdFontsCatalog = $null
+
 function Invoke-GitHubRateLimitedRestMethod {
     param(
         [Parameter(Mandatory)]
         [string]$Uri,
         [Parameter(Mandatory)]
         [hashtable]$Headers,
-        [Parameter(Mandatory)]
+        [Parameter()]
         [hashtable]$RateLimitState
     )
 
-    if ($RateLimitState.LastApiCall) {
-        $elapsed = (Get-Date) - $RateLimitState.LastApiCall
-        if ($elapsed.TotalMilliseconds -lt $RateLimitState.ApiCallInterval) {
-            Start-Sleep -Milliseconds ($RateLimitState.ApiCallInterval - $elapsed.TotalMilliseconds)
+    if ($RateLimitState) {
+        if ($RateLimitState.LastApiCall) {
+            $elapsed = (Get-Date) - $RateLimitState.LastApiCall
+            if ($elapsed.TotalMilliseconds -lt $RateLimitState.ApiCallInterval) {
+                Start-Sleep -Milliseconds ($RateLimitState.ApiCallInterval - $elapsed.TotalMilliseconds)
+            }
         }
+        $RateLimitState.LastApiCall = Get-Date
+    } else {
+        if ($script:LastApiCall) {
+            $elapsed = (Get-Date) - $script:LastApiCall
+            if ($elapsed.TotalMilliseconds -lt $script:ApiCallInterval) {
+                Start-Sleep -Milliseconds ($script:ApiCallInterval - $elapsed.TotalMilliseconds)
+            }
+        }
+        $script:LastApiCall = Get-Date
     }
 
-    $RateLimitState.LastApiCall = Get-Date
     return Invoke-RestMethod -Uri $Uri -Headers $Headers
 }
 
@@ -166,7 +180,7 @@ function Get-GitHubRepositoryMetadata {
         [hashtable]$Headers,
         [Parameter(Mandatory)]
         [hashtable]$Cache,
-        [Parameter(Mandatory)]
+        [Parameter()]
         [hashtable]$RateLimitState,
         [Parameter()]
         [string]$FallbackLicense
@@ -199,7 +213,7 @@ function Get-GitHubReleaseData {
         [hashtable]$Headers,
         [Parameter(Mandatory)]
         [hashtable]$Cache,
-        [Parameter(Mandatory)]
+        [Parameter()]
         [hashtable]$RateLimitState
     )
 
@@ -256,10 +270,61 @@ function Find-GitHubDownloadUrl {
 }
 
 function Get-NerdFontsCatalog {
+    param(
+        [Parameter()]
+        [switch]$Force,
+        [Parameter()]
+        [string]$CacheDirectory
+    )
+
+    if (-not $Force -and $null -ne $script:NerdFontsCatalog) {
+        return $script:NerdFontsCatalog
+    }
+
+    $cacheRoot = if ($CacheDirectory) {
+        $CacheDirectory
+    } else {
+        Join-Path $env:TEMP 'scoop-fonts'
+    }
+    $cacheFile = Join-Path $cacheRoot 'nerdfonts-catalog.json'
+
+    if (-not $Force -and (Test-Path -LiteralPath $cacheFile)) {
+        $item = Get-Item -LiteralPath $cacheFile
+        $age = (Get-Date) - $item.LastWriteTime
+        if ($age.TotalHours -lt 24) {
+            try {
+                $cachedData = Get-Content -LiteralPath $cacheFile -Raw | ConvertFrom-Json
+                if ($cachedData -and $cachedData.fonts -and $cachedData.fonts.Count -gt 0) {
+                    $script:NerdFontsCatalog = $cachedData.fonts
+                    return $script:NerdFontsCatalog
+                }
+            } catch {
+                Write-Warning "Failed to read cached Nerd Fonts catalog: $($_.Exception.Message)"
+            }
+        }
+    }
+
     $headers = New-GitHubHeaders
     Write-Host 'Fetching release data for Nerd Fonts...'
-    $rateLimitState = @{ LastApiCall = $null; ApiCallInterval = 0 }
-    $fonts = (Invoke-GitHubRateLimitedRestMethod -Uri 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers -RateLimitState $rateLimitState).fonts
+    $fonts = @()
+    try {
+        $response = Invoke-GitHubRateLimitedRestMethod -Uri 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers
+        if ($response -and $response.fonts) {
+            $fonts = $response.fonts
+            $script:NerdFontsCatalog = $fonts
+            try {
+                if (-not (Test-Path -LiteralPath $cacheRoot)) {
+                    New-Item -ItemType Directory -Force -Path $cacheRoot | Out-Null
+                }
+                $response | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheFile -Force
+            } catch {
+                Write-Warning "Failed to save Nerd Fonts catalog cache: $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warning "Nerd Fonts: Failed to fetch release data from GitHub: $($_.Exception.Message)"
+    }
+
     if ($fonts.Count -eq 0) {
         Write-Warning 'Nerd Fonts: Failed to fetch release data from GitHub.'
     }
