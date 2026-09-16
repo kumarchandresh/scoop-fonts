@@ -102,6 +102,10 @@ try {
             }
 
             $description = if ($null -ne $var.Desc) { $var.Desc } else { $repo.description }
+            if ([string]::IsNullOrWhiteSpace($description)) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Description' -Reason "Failed to retrieve description for repository $($var.Repo). Please specify 'Desc' in the font module."
+                continue
+            }
             Write-Host "description: $description"
 
             if ($null -eq $license) {
@@ -159,7 +163,12 @@ try {
                 InstallerLines   = $installerLines
                 UninstallerLines = $uninstallerLines
             }
-            $manifest = New-ScoopManifest @manifestParams
+            try {
+                $manifest = New-ScoopManifest @manifestParams
+            } catch {
+                Add-ManifestFailure -Name $var.Name -Stage 'Manifest Rendering' -Reason $_.Exception.Message
+                continue
+            }
 
             ConvertTo-Json $manifest | Out-File -Encoding utf8 -FilePath $file
 
