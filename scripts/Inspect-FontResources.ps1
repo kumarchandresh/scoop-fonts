@@ -49,13 +49,13 @@ foreach ($m in $modules) {
         }
         $val = $entry.Value
         $results.Add([PSCustomObject]@{
-            Module = $m.BaseName
-            Font   = $name
-            Repo   = $val.Repo
-            Regex  = $val.Regex
-            Filter = $val.Filter
-            Dir    = $val.Dir
-        })
+                Module = $m.BaseName
+                Font   = $name
+                Repo   = $val.Repo
+                Regex  = $val.Regex
+                Filter = $val.Filter
+                Dir    = $val.Dir
+            })
     }
 }
 

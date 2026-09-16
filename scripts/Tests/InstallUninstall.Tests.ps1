@@ -104,12 +104,12 @@ Describe 'Installer failure handling' {
 
         # Tamper installer filter in memory to an impossible pattern
         $manifest.installer.script = @($manifest.installer.script | ForEach-Object {
-            if ($_ -match '^\$filter\s*=') {
-                '$filter = ''^NonExistentPattern.*\.ttf$'''
-            } else {
-                $_
-            }
-        })
+                if ($_ -match '^\$filter\s*=') {
+                    '$filter = ''^NonExistentPattern.*\.ttf$'''
+                } else {
+                    $_
+                }
+            })
         $manifest | ConvertTo-Json -Depth 10 | Set-Content $tempManifestPath -Encoding utf8
 
         $beforeCount = @(Get-ChildItem $fontDirectory -File -ErrorAction SilentlyContinue).Count
