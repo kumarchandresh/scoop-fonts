@@ -250,23 +250,29 @@ function Find-GitHubDownloadUrl {
         [string]$Regex
     )
 
-    $matchedUrls = @(
-        if ($Latest) {
-            $ReleaseInfo.assets.browser_download_url | Where-Object { $_ -match $Regex }
-        } else {
-            $ReleaseInfo | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match $Regex }
+    if ($Latest) {
+        $matchedUrls = @($ReleaseInfo.assets.browser_download_url | Where-Object { $_ -match $Regex })
+        if ($matchedUrls.Count -gt 1) {
+            throw "Ambiguous asset match: multiple URLs matched regex '$Regex': $($matchedUrls -join ', ')"
         }
-    )
-
-    if ($matchedUrls.Count -gt 1) {
-        throw "Ambiguous asset match: multiple URLs matched regex '$Regex': $($matchedUrls -join ', ')"
+        if ($matchedUrls.Count -eq 0) {
+            return $null
+        }
+        return $matchedUrls[0]
     }
 
-    if ($matchedUrls.Count -eq 0) {
-        return $null
+    foreach ($release in $ReleaseInfo) {
+        $matchedUrls = @($release.assets.browser_download_url | Where-Object { $_ -match $Regex })
+        if ($matchedUrls.Count -gt 1) {
+            $tag = if ($release.tag_name) { "in release '$($release.tag_name)' " } else { '' }
+            throw "Ambiguous asset match: multiple URLs ${tag}matched regex '$Regex': $($matchedUrls -join ', ')"
+        }
+        if ($matchedUrls.Count -eq 1) {
+            return $matchedUrls[0]
+        }
     }
 
-    return $matchedUrls[0]
+    return $null
 }
 
 function Get-NerdFontsCatalog {
