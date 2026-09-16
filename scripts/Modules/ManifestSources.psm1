@@ -1,13 +1,95 @@
+function Get-ScoopConfig {
+    param([string]$Name)
+    $configHome = $env:XDG_CONFIG_HOME, "$([System.Environment]::GetFolderPath('UserProfile'))\.config" | Where-Object { $_ } | Select-Object -First 1
+    $configFile = Join-Path $configHome 'scoop\config.json'
+    if (Test-Path -LiteralPath $configFile) {
+        try {
+            $json = Get-Content -LiteralPath $configFile -Raw | ConvertFrom-Json
+            $prop = $Name.ToLowerInvariant()
+            return $json.$prop
+        } catch {}
+    }
+    return $null
+}
+
+function Get-GitHubToken {
+    return $env:SCOOP_GH_TOKEN, (Get-ScoopConfig 'gh_token'), $env:GH_TOKEN, $env:GITHUB_TOKEN |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Select-Object -First 1
+}
+
 function New-GitHubHeaders {
     $headers = @{
         "User-Agent" = "PowerShell"
         "Accept"     = "application/vnd.github.v3+json"
     }
-    if ($env:GITHUB_TOKEN) {
-        $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+    $token = Get-GitHubToken
+    if ($token) {
+        $headers["Authorization"] = "Bearer $token"
     }
     return $headers
 }
+
+function Show-GitHubRateLimit {
+    param([hashtable]$Headers = (New-GitHubHeaders))
+    try {
+        $response = Invoke-RestMethod -Uri 'https://api.github.com/rate_limit' -Headers $Headers
+        Write-Host ("GITHUB API RATE LIMIT: " + ($response.rate | ConvertTo-Json -Compress))
+    } catch {
+        Write-Warning "Failed to query GitHub API rate limit: $($_.Exception.Message)"
+    }
+}
+
+function Enable-ScoopGitHubAuthForCheckver {
+    $token = Get-GitHubToken
+    if (-not $token) { return $null }
+
+    $configHome = $env:XDG_CONFIG_HOME, "$([System.Environment]::GetFolderPath('UserProfile'))\.config" | Where-Object { $_ } | Select-Object -First 1
+    $configFile = Join-Path $configHome 'scoop\config.json'
+    if (-not (Test-Path -LiteralPath $configFile)) { return $null }
+
+    try {
+        $cfg = Get-Content -LiteralPath $configFile -Raw | ConvertFrom-Json
+        $origHosts = $cfg.private_hosts
+        $hasGithub = $false
+        if ($origHosts) {
+            foreach ($h in $origHosts) {
+                if ($h.match -match 'api\.github\.com') {
+                    $hasGithub = $true
+                    break
+                }
+            }
+        }
+        if (-not $hasGithub) {
+            $entry = [PSCustomObject]@{
+                match   = 'api\.github\.com'
+                headers = "Authorization=token $token"
+            }
+            $cfg | Add-Member -MemberType NoteProperty -Name 'private_hosts' -Value @($origHosts + @($entry)) -Force
+            $cfg | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configFile
+            return @{
+                ConfigFile    = $configFile
+                OriginalHosts = $origHosts
+            }
+        }
+    } catch {}
+    return $null
+}
+
+function Disable-ScoopGitHubAuthForCheckver {
+    param($State)
+    if ($null -eq $State -or -not (Test-Path -LiteralPath $State.ConfigFile)) { return }
+    try {
+        $cfg = Get-Content -LiteralPath $State.ConfigFile -Raw | ConvertFrom-Json
+        if ($null -ne $State.OriginalHosts) {
+            $cfg.private_hosts = $State.OriginalHosts
+        } else {
+            $cfg.PSObject.Properties.Remove('private_hosts')
+        }
+        $cfg | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $State.ConfigFile
+    } catch {}
+}
+
 
 function ConvertTo-ManifestCachePathPart {
     param(

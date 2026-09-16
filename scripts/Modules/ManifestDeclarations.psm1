@@ -1,3 +1,5 @@
+Import-Module (Join-Path $PSScriptRoot 'ManifestSources.psm1')
+
 function Get-AllFontDeclarations {
     param(
         [Parameter()]
@@ -8,7 +10,6 @@ function Get-AllFontDeclarations {
         $FontsDirectory = Join-Path $PSScriptRoot '..\Fonts' -Resolve
     }
 
-    Import-Module -Force (Join-Path $PSScriptRoot 'ManifestSources.psm1')
 
     $allFonts = [ordered]@{}
     $fontModules = @(Get-ChildItem -LiteralPath $FontsDirectory -Filter '*.psm1' | Sort-Object Name)
