@@ -26,17 +26,17 @@ function Get-IBMPlexResources {
         @{ fontName = 'IBMPlexSansTC'; fileName = 'ibm-plex-sans-tc'; dir = 'ibm-plex-sans-tc\fonts\complete\ttf\hinted'; filter = 'IBMPlexSansTC-.*\.ttf$' },
         @{ fontName = 'IBMPlexSansTC-OTF'; fileName = 'ibm-plex-sans-tc'; dir = 'ibm-plex-sans-tc\fonts\complete\otf\hinted'; filter = 'IBMPlexSansTC-.*\.otf$' },
         @{ fontName = 'IBMPlexSansTC-Unhinted'; fileName = 'ibm-plex-sans-tc'; dir = 'ibm-plex-sans-tc\fonts\complete\ttf\unhinted'; filter = 'IBMPlexSansTC-.*\.ttf$' },
-        @{ fontName = 'IBMPlexSansTC-Unhinted-OTF'; fileName = 'ibm-plex-sans-tc'; dir = 'ibm-plex-sans-tc\fonts\complete\otf\unhinted'; filter = 'IBMPlexSansTC-.*\.otf$' },
+        @{ fontName = 'IBMPlexSansTC-Unhinted-OTF'; fileName = 'ibm-plex-sans-tc'; dir = 'ibm-plex-sans-tc\fonts\complete\otf\unhinted'; filter = 'IBMPlexSansTC-.*\.ttf$' },
         @{ fontName = 'IBMPlexSansArabic'; fileName = 'ibm-plex-sans-arabic'; dir = 'ibm-plex-sans-arabic\fonts\complete\ttf'; filter = 'IBMPlexSansArabic-.*\.ttf$' },
         @{ fontName = 'IBMPlexSansArabic-OTF'; fileName = 'ibm-plex-sans-arabic'; dir = 'ibm-plex-sans-arabic\fonts\complete\otf'; filter = 'IBMPlexSansArabic-.*\.otf$' },
         @{ fontName = 'IBMPlexSansDevanagari'; fileName = 'ibm-plex-sans-devanagari'; dir = 'ibm-plex-sans-devanagari\fonts\complete\ttf'; filter = 'IBMPlexSansDevanagari-.*\.ttf$' },
         @{ fontName = 'IBMPlexSansDevanagari-OTF'; fileName = 'ibm-plex-sans-devanagari'; dir = 'ibm-plex-sans-devanagari\fonts\complete\otf'; filter = 'IBMPlexSansDevanagari-.*\.otf$' },
         @{ fontName = 'IBMPlexSansHebrew'; fileName = 'ibm-plex-sans-hebrew'; dir = 'ibm-plex-sans-hebrew\fonts\complete\ttf'; filter = 'IBMPlexSansHebrew-.*\.ttf$' },
         @{ fontName = 'IBMPlexSansHebrew-OTF'; fileName = 'ibm-plex-sans-hebrew'; dir = 'ibm-plex-sans-hebrew\fonts\complete\otf'; filter = 'IBMPlexSansHebrew-.*\.otf$' },
-        @{ fontName = 'IBMPlexSansThai'; fileName = 'ibm-plex-sans-thai'; dir = 'ibm-plex-sans-thai\fonts\complete\ttf'; filter = 'IBMPlexSansThai-.*\.ttf$' }
-        @{ fontName = 'IBMPlexSansThai-OTF'; fileName = 'ibm-plex-sans-thai'; dir = 'ibm-plex-sans-thai\fonts\complete\otf'; filter = 'IBMPlexSansThai-.*\.otf$' }
-        @{ fontName = 'IBMPlexSansThaiLooped'; fileName = 'ibm-plex-sans-thai-looped'; dir = 'ibm-plex-sans-thai-looped\fonts\complete\ttf'; filter = 'IBMPlexSansThaiLooped-.*\.ttf$' }
-        @{ fontName = 'IBMPlexSansThaiLooped-OTF'; fileName = 'ibm-plex-sans-thai-looped'; dir = 'ibm-plex-sans-thai-looped\fonts\complete\otf'; filter = 'IBMPlexSansThaiLooped-.*\.otf$' }
+        @{ fontName = 'IBMPlexSansThai'; fileName = 'ibm-plex-sans-thai'; dir = 'ibm-plex-sans-thai\fonts\complete\ttf'; filter = 'IBMPlexSansThai-.*\.ttf$' },
+        @{ fontName = 'IBMPlexSansThai-OTF'; fileName = 'ibm-plex-sans-thai'; dir = 'ibm-plex-sans-thai\fonts\complete\otf'; filter = 'IBMPlexSansThai-.*\.ttf$' },
+        @{ fontName = 'IBMPlexSansThaiLooped'; fileName = 'ibm-plex-sans-thai-looped'; dir = 'ibm-plex-sans-thai-looped\fonts\complete\ttf'; filter = 'IBMPlexSansThaiLooped-.*\.ttf$' },
+        @{ fontName = 'IBMPlexSansThaiLooped-OTF'; fileName = 'ibm-plex-sans-thai-looped'; dir = 'ibm-plex-sans-thai-looped\fonts\complete\otf'; filter = 'IBMPlexSansThaiLooped-.*\.ttf$' }
     )
     $manifests = [ordered]@{}
     foreach ($font in $plexFonts) {
@@ -51,4 +51,3 @@ function Get-IBMPlexResources {
 
     return $manifests
 }
-

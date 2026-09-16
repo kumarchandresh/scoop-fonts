@@ -31,6 +31,7 @@ function Get-IosevkaResources {
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/Pkg${prefix}-${fontName}-[\d.]+\.zip"
                 Filter = "${fontName}-.*\.ttf$"
+                Latest = $true
             }
         }
     }
@@ -48,6 +49,7 @@ function Get-IosevkaResources {
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/${archivePrefix}-${fontName}-[\d.]+\.zip"
                 Filter = $filter
+                Latest = $true
             }
         }
     }
@@ -62,10 +64,18 @@ function Get-IosevkaResources {
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/${archivePrefix}-${fontName}-[\d.]+\.zip"
                 Filter = "SGr-${fontName}-.*\.ttc$"
+                Latest = $true
             }
         }
     }
 
     return $manifests
 }
+
+
+
+
+
+
+
 

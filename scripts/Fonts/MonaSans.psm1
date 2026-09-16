@@ -27,9 +27,10 @@ function Get-MonaSansResources {
             $name = "MonaSans$style$($fmt.Suffix)"
             $manifests[$name] = @{
                 Repo   = 'github/mona-sans'
-                Regex  = '/mona-sans-static-v?([\d.]+)+.zip'
+                Regex  = '/mona-sans-static-v?([\d.]+)\.zip'
                 Dir    = $fmt.Dir
                 Filter = "MonaSans$style-.*.$($fmt.Ext)$"
+                Latest = $true
             }
         }
     }

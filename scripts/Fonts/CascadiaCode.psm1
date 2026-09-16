@@ -18,8 +18,9 @@ function Get-CascadiaCodeResources {
             $name = "$variant$($fmt.Suffix)"
             $manifests[$name] = @{
                 Repo    = 'microsoft/cascadia-code'
-                Regex   = '/v?([\d.]+)/.*\.zip'
+                Regex   = '/v?([\d.]+)/CascadiaCode-[\d.]+\.zip'
                 Filter  = "$variant-.*.$($fmt.Ext)$"
+                Latest  = $true
                 License = 'OFL-1.1-RFN'
                 Dir     = $fmt.Dir
             }

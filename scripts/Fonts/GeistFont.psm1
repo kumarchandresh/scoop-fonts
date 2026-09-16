@@ -16,8 +16,9 @@ function Get-GeistFontResources {
             $name = "$variant$($pkg.Suffix)"
             $manifests[$name] = @{
                 Repo   = 'vercel/geist-font'
-                Regex  = '/geist-font-v?([\d.]+)+.zip'
+                Regex  = '/geist-font-v?([\d.]+)\.zip'
                 Filter = '\.[ot]tf$'
+                Latest = $true
                 Dir    = "geist-font/$variant/$($pkg.Dir)"
             }
         }
@@ -25,4 +26,3 @@ function Get-GeistFontResources {
 
     return $manifests
 }
-

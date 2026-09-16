@@ -118,6 +118,7 @@ function Get-NerdFontsResources {
                     Filter  = "${fontRegex}-.*\.[ot]tf$"
                     License = $font.licenseId
                     Desc    = $font.description
+                    Latest  = $true
                 }
             }
         }

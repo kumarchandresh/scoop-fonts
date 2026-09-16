@@ -30,6 +30,7 @@ function Get-MonaspaceResources {
                 Regex  = "/v?([\d.]+)/monaspace-${variant}-v?[\d.]+\.zip"
                 Filter = "\.[ot]tf$"
                 Dir    = "$($config[$variant].dir)\Monaspace $flavor"
+                Latest = $true
             }
         }
         $fontName = "Monaspace${suffix}"
@@ -38,6 +39,7 @@ function Get-MonaspaceResources {
             Regex  = "/v?([\d.]+)/monaspace-${variant}-v?[\d.]+\.zip"
             Filter = "\.[ot]tf$"
             Dir    = $config[$variant].dir
+            Latest = $true
         }
     }
 

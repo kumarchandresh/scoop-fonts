@@ -28,10 +28,10 @@ function Get-MapleMonoResources {
                 Regex  = "/v?([\d.]+)/${fileName}\.zip"
                 Filter = "\.[ot]tf$"
                 Desc   = 'Maple Mono is an open source monospace font focused on smoothing your coding flow.'
+                Latest = $true
             }
         }
     }
 
     return $manifests
 }
-
