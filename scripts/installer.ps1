@@ -1,36 +1,46 @@
 if (([Environment]::OSVersion.Version -lt [version]'10.0.17763') -and (-not $global)) {
-    Write-Error "`nWindows prior to Windows 10 Version 1809 does not allow installation of fonts at the user level. Please install it globally." -ForegroundColor Red -ErrorAction Stop
+    Write-Error "`nWindows prior to Windows 10 Version 1809 does not allow installation of fonts at the user level. Please install it globally." -ErrorAction Stop
 }
 
 Add-Type -AssemblyName PresentationCore, WindowsBase
 
 $fontDir = if ($global) { "${env:WINDIR}\Fonts" } else { "${env:LOCALAPPDATA}\Microsoft\Windows\Fonts" }
 $regDrive = if ($global) { 'HKLM:' } else { 'HKCU:' }
-$regKey = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+$registry = [PSCustomObject]@{
+    Path  = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts";
+    Name  = $null;
+    Value = $null;
+}
 
 if (-not (Test-Path -LiteralPath $fontDir -PathType Container)) {
     New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
 }
 
-$files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -match $filter }
+$baseDir = (Get-Item -LiteralPath $dir).FullName.TrimEnd('\', '/')
+function Get-RelativePath($file) {
+    $file.FullName.Substring($baseDir.Length).TrimStart('\', '/')
+}
+
+Get-ChildItem $dir -Recurse -File | ForEach-Object { Get-RelativePath $_ } | Write-Output
+$files = Get-ChildItem $dir -Recurse -File | Where-Object {
+    $_.Name -match '\.(ttf|otf|ttc|otc)$' -and ((Get-RelativePath $_) -match $filter)
+}
 if ($files.Count -eq 0) {
     Write-Error 'Failed to find fonts to install. Please recheck the filter.' -ErrorAction Stop
 }
 
-$junk = Get-ChildItem $dir -Recurse -File | Where-Object { ($_.Name -match '\.(ttf|otf|ttc|otc|woff2?|eot|svgz?|s?css)$') -and ($_.Name -notmatch $filter) }
-foreach ($file in $junk) {
+$extra = Get-ChildItem $dir -Recurse -File | Where-Object {
+    $_.Name -match '\.(ttf|otf|ttc|otc|woff2?|eot|svgz?|s?css)$' -and ((Get-RelativePath $_) -notmatch $filter)
+}
+foreach ($file in $extra) {
     Remove-Item -Force -LiteralPath $file.FullName -ErrorAction SilentlyContinue
 }
 
-$fonts = @()
-foreach ($file in $files) {
-    if (-not ($file.Name -match '\.(ttf|otf|ttc|otc)$')) {
-        Write-Error 'Unsupported font format. Please use TTF or OTF files.'
-        continue
-    }
+$fonts = foreach ($file in $files) {
     $fileUri = [uri]::new($file.FullName)
     $glyphTypeface = $null
-    $regValueName = $null
+    $registry.Name = $null
+    $registry.Value = $null
     try {
         $glyphTypeface = [System.Windows.Media.GlyphTypeface]::new($fileUri)
         if ($null -ne $glyphTypeface) {
@@ -54,7 +64,7 @@ foreach ($file in $files) {
             if (($null -ne $fontFamilyName) -and ($null -ne $fontFaceName)) {
                 $fontFamilyName = $fontFamilyName.Trim()
                 $fontFaceName = $fontFaceName.Trim()
-                $regValueName = "$fontFamilyName $fontFaceName (TrueType)"
+                $registry.Name = "$fontFamilyName $fontFaceName (TrueType)"
             }
         }
     } catch {
@@ -65,20 +75,17 @@ foreach ($file in $files) {
         [System.GC]::Collect()
         [System.GC]::WaitForPendingFinalizers()
     }
-    if ([string]::IsNullOrWhiteSpace($regValueName)) {
-        Write-Output "Could not determine font family name from metadata; using filename instead."
-        $regValueName = $file.Name
+    if ([string]::IsNullOrWhiteSpace($registry.Name)) {
+        Write-Warning "Could not determine font family name from metadata; using filename instead."
+        $registry.Name = $file.Name
     }
-    # Write-Debug "regValueName: $regValueName"
-    $font = [PSCustomObject]@{
+    $result = [PSCustomObject]@{
         File     = $file
-        Registry = $regValueName
+        Registry = $registry.Name
         Success  = $false
     }
-    $fonts += $font
     $fontPath = "$fontDir\$($file.Name)"
-    $regValueData = if ($global) { $file.Name } else { $fontPath }
-    # Write-Debug "regValueData: $regValueData"
+    $registry.Value = if ($global) { $file.Name } else { $fontPath }
     if (Test-Path -LiteralPath $fontPath) {
         # Force garbage collection to release any .NET handles on font files
         [System.GC]::Collect()
@@ -97,17 +104,18 @@ foreach ($file in $files) {
     try {
         Copy-Item -Force -LiteralPath $file.FullName -Destination $fontDir
 
-        $existingKey = Get-ItemProperty -Path $regKey -Name $regValueName -ErrorAction SilentlyContinue
+        $existingKey = Get-ItemProperty -Path $registry.Path -Name $registry.Name -ErrorAction SilentlyContinue
         if ($null -eq $existingKey) {
-            New-ItemProperty -Force -Path $regKey -Name $regValueName -Value $regValueData -PropertyType String -ErrorAction Stop | Out-Null
+            New-ItemProperty -Force -Path $registry.Path -Name $registry.Name -Value $registry.Value -PropertyType String -ErrorAction Stop | Out-Null
         } else {
-            Set-ItemProperty -Force -Path $regKey -Name $regValueName -Value $regValueData -ErrorAction Stop | Out-Null
+            Set-ItemProperty -Force -Path $registry.Path -Name $registry.Name -Value $registry.Value -ErrorAction Stop | Out-Null
         }
-        $font.Success = $true
+        $result.Success = $true
     } catch {
         Write-Error "Failed to install font $($file.Name): $($_.Exception.Message)"
     }
+    $result
 }
 if ($fonts.Count -gt 0) {
-    $fonts | Select-Object @{Name = 'Font'; Expression = { $_.File.Name } }, Registry, Success | Format-Table -AutoSize
+    $fonts | Select-Object @{ Name = 'Font'; Expression = { $_.File.Name } }, Registry, Success | Format-Table -AutoSize
 }

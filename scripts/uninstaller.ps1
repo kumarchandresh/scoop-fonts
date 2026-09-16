@@ -2,22 +2,28 @@ Add-Type -AssemblyName PresentationCore, WindowsBase
 
 $fontDir = if ($global) { "${env:WINDIR}\Fonts" } else { "${env:LOCALAPPDATA}\Microsoft\Windows\Fonts" }
 $regDrive = if ($global) { 'HKLM:' } else { 'HKCU:' }
-$regKey = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+$registry = [PSCustomObject]@{
+    Path = "$regDrive\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts";
+    Name = $null;
+}
 
-$files = Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -match $filter }
+$baseDir = (Get-Item -LiteralPath $dir).FullName.TrimEnd('\', '/')
+function Get-RelativePath($file) {
+    $file.FullName.Substring($baseDir.Length).TrimStart('\', '/')
+}
+
+Get-ChildItem $dir -Recurse -File | ForEach-Object { Get-RelativePath $_ } | Write-Output
+$files = Get-ChildItem $dir -Recurse -File | Where-Object {
+    $_.Name -match '\.(ttf|otf|ttc|otc)$' -and ((Get-RelativePath $_) -match $filter)
+}
 if ($files.Count -eq 0) {
     Write-Error 'Failed to find fonts to uninstall. Please recheck the filter.' -ErrorAction Stop
 }
 
-$fonts = @()
-foreach ($file in $files) {
-    if (-not ($file.Name -match '\.(ttf|otf|ttc|otc)$')) {
-        Write-Error 'Unsupported font format. Please use TTF or OTF files.'
-        continue
-    }
+$fonts = foreach ($file in $files) {
     $fileUri = [uri]::new($file.FullName)
     $glyphTypeface = $null
-    $regValueName = $null
+    $registry.Name = $null
     try {
         $glyphTypeface = [System.Windows.Media.GlyphTypeface]::new($fileUri)
         if ($null -ne $glyphTypeface) {
@@ -41,7 +47,7 @@ foreach ($file in $files) {
             if (($null -ne $fontFamilyName) -and ($null -ne $fontFaceName)) {
                 $fontFamilyName = $fontFamilyName.Trim()
                 $fontFaceName = $fontFaceName.Trim()
-                $regValueName = "$fontFamilyName $fontFaceName (TrueType)"
+                $registry.Name = "$fontFamilyName $fontFaceName (TrueType)"
             }
         }
     } catch {
@@ -52,17 +58,15 @@ foreach ($file in $files) {
         [System.GC]::Collect()
         [System.GC]::WaitForPendingFinalizers()
     }
-    if ([string]::IsNullOrWhiteSpace($regValueName)) {
-        Write-Output "Could not determine font family name from metadata; using filename instead."
-        $regValueName = $file.Name
+    if ([string]::IsNullOrWhiteSpace($registry.Name)) {
+        Write-Warning "Could not determine font family name from metadata; using filename instead."
+        $registry.Name = $file.Name
     }
-    # Write-Debug "regValueName: $regValueName"
-    $font = [PSCustomObject]@{
+    $result = [PSCustomObject]@{
         File     = $file
-        Registry = $regValueName
+        Registry = $registry.Name
         Success  = $false
     }
-    $fonts += $font
     $fontPath = "$fontDir\$($file.Name)"
     if (Test-Path -LiteralPath $fontPath) {
         # Force garbage collection to release any .NET handles on font files
@@ -80,12 +84,13 @@ foreach ($file in $files) {
         }
     }
     try {
-        Remove-ItemProperty -Path $regKey -Name $regValueName -ErrorAction Stop
-        $font.Success = $true
+        Remove-ItemProperty -Path $registry.Path -Name $registry.Name -ErrorAction Stop
+        $result.Success = $true
     } catch {
         Write-Error "Failed to uninstall font $($file.Name): $($_.Exception.Message)"
     }
+    $result
 }
 if ($fonts.Count -gt 0) {
-    $fonts | Select-Object @{Name = 'Font'; Expression = { $_.File.Name } }, Registry, Success | Format-Table -AutoSize
+    $fonts | Select-Object @{ Name = 'Font'; Expression = { $_.File.Name } }, Registry, Success | Format-Table -AutoSize
 }
