@@ -2,6 +2,8 @@ param (
     [Parameter(Position = 0)]
     [string[]]$Fonts, # regexes
     [Parameter()]
+    [string[]]$Module,
+    [Parameter()]
     [switch]$Force,
     [Parameter()]
     [switch]$NoNerdFont,
@@ -15,328 +17,184 @@ Set-StrictMode -Version 1
 
 $ROOT_DIR = Join-Path $PSScriptRoot ".." -Resolve
 
-$allFonts = [ordered]@{}
+Import-Module -Force "$PSScriptRoot\Modules\ManifestSources.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\ManifestDeclarations.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\ManifestInventory.psm1"
+Import-Module -Force "$PSScriptRoot\Modules\ManifestRenderer.psm1"
 
-Import-Module -Force "$PSScriptRoot\Modules\0xType.psm1"
-(Get-0xTypeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+$allFonts = Get-AllFontDeclarations -Force:$Force
 
-Import-Module -Force "$PSScriptRoot\Modules\CascadiaCode.psm1"
-(Get-CascadiaCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
+Test-ManifestInventory -Declarations $allFonts -BucketDir "$ROOT_DIR\bucket" -DeprecatedDir "$ROOT_DIR\deprecated" -Clean:$Clean
 
-Import-Module -Force "$PSScriptRoot\Modules\GoogleSansCode.psm1"
-(Get-GoogleSansCodeFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\IBMPlex.psm1"
-(Get-IBMPlexFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\Iosevka.psm1"
-(Get-IosevkaFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\JetbrainsMono.psm1"
-(Get-JetBrainsMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\MapleMono.psm1"
-(Get-MapleMonoFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\Monaspace.psm1"
-(Get-MonaspaceFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Import-Module -Force "$PSScriptRoot\Modules\NerdFonts.psm1"
-(Get-NerdFonts).GetEnumerator() | ForEach-Object { $allFonts[$_.Key] = $_.Value }
-
-Get-ChildItem "$PSScriptRoot\..\bucket" -Filter '*.json' | ForEach-Object {
-    if (-not $allFonts.Contains($_.BaseName)) {
-        if ($Clean) {
-            Write-Host "unmanaged manifest deprecated: $($_.BaseName)" -ForegroundColor Yellow
-            Copy-Item -Path $_.FullName -Destination "$ROOT_DIR\deprecated\$($_.BaseName).json"
-        } else {
-            Write-Host "unmanaged manifest detected: $($_.BaseName)" -ForegroundColor DarkGray
-        }
-    }
-}
-
-$installerContent = Get-Content "$PSScriptRoot\installer.ps1"
-$installer = @()
-foreach ($line in $installerContent) {
-    if ([string]::IsNullOrEmpty($line)) {
-        continue
-    }
-    if ($line -match '^\s*#') {
-        continue
-    }
-    $installer += $line
-}
-
-$uninstallerContent = Get-Content "$PSScriptRoot\uninstaller.ps1"
-$uninstaller = @()
-foreach ($line in $uninstallerContent) {
-    if ([string]::IsNullOrEmpty($line)) {
-        continue
-    }
-    if ($line -match '^\s*#') {
-        continue
-    }
-    $uninstaller += $line
-}
+$installerLines = @(Get-Content "$PSScriptRoot\installer.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
+$uninstallerLines = @(Get-Content "$PSScriptRoot\uninstaller.ps1" | Where-Object { $_ -and $_ -notmatch '^\s*#' })
 
 $cache = @{}
 $hashes = @{}
 $releases = @{}
 
-$lastApiCall = $null
-$apiCallInterval = 500 # milliseconds
-
-function Invoke-RateLimitedRestMethod {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Uri,
-        [Parameter(Mandatory)]
-        [hashtable]$Headers
-    )
-
-    if ($script:lastApiCall) {
-        $elapsed = (Get-Date) - $script:lastApiCall
-        if ($elapsed.TotalMilliseconds -lt $script:apiCallInterval) {
-            Start-Sleep -Milliseconds ($script:apiCallInterval - $elapsed.TotalMilliseconds)
-        }
-    }
-
-    $script:lastApiCall = Get-Date
-    return Invoke-RestMethod -Uri $Uri -Headers $Headers
-}
-
 $formatjson = "$PSScriptRoot\..\bin\formatjson.ps1"
 
-foreach ($fontEntry in $allFonts.GetEnumerator()) {
-    $var = $fontEntry.Value
-    $var.Name = $fontEntry.Key
+$failedManifests = [System.Collections.Generic.List[PSCustomObject]]::new()
 
+function Add-ManifestFailure {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [string]$Stage,
+        [Parameter(Mandatory)]
+        [string]$Reason
+    )
+    $failedManifests.Add([PSCustomObject]@{
+            Name   = $Name
+            Stage  = $Stage
+            Reason = $Reason
+        })
+    Write-Host "Failed [$Stage] for $($Name): $Reason" -ForegroundColor Red
+}
 
-    if (-not $var.ContainsKey('Filter')) {
-        Write-Error "missing filter: $($var.Name)"
-        continue
-    }
+Show-GitHubRateLimit
 
-    if ($Fonts.Count -ne 0 -and $Fonts.Where({ $var.Name -match $_ }).Count -eq 0) {
-        continue
-    }
+$scoopAuth = if (-not $NoCheckVer) { Enable-ScoopGitHubAuthForCheckver }
+try {
+    foreach ($fontEntry in $allFonts.GetEnumerator()) {
+        $var = $fontEntry.Value
+        $var.Name = $fontEntry.Key
 
-    if ($NoNerdFont -and $var.Name -match 'NerdFont(Mono|Propo)?') {
-        continue
-    }
-
-    $file = "$PSScriptRoot\..\bucket\$($var.Name).json"
-    if (-not (Test-Path $file) -or $Force) {
-
-        Write-Host ''
-        Write-Host "manifest: $($var.Name).json" -ForegroundColor Green
-        Write-Host "homepage: https://github.com/$($var.Repo)"
-
-        $headers = @{
-            "User-Agent" = "PowerShell"
-            "Accept"     = "application/vnd.github.v3+json"
-        }
-        if ($env:GITHUB_TOKEN) {
-            $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+        if ($Module -and $Module.Count -ne 0 -and $Module.Where({ $var.ContainsKey('Module') -and ($var.Module -match "^$([regex]::Escape($_))$" -or $var.Module -match $_) }).Count -eq 0) {
+            continue
         }
 
-        $originRepo = if ( $null -eq $var.Origin ) { $var.Repo } else { $var.Origin }
-        $cacheKey = $originRepo.ToLower()
+        if ($Fonts.Count -ne 0 -and $Fonts.Where({ $var.Name -match $_ -or ($var.ContainsKey('Module') -and $var.Module -match "^$([regex]::Escape($_))$") }).Count -eq 0) {
+            continue
+        }
 
-        if ($cache.ContainsKey($cacheKey)) {
-            $repo = $cache[$cacheKey].Repo
-            $license = $cache[$cacheKey].License
-        } else {
-            $repo = Invoke-RateLimitedRestMethod -Uri "https://api.github.com/repos/$($originRepo)" -Headers $headers
-            $license = Invoke-RateLimitedRestMethod -Uri "https://api.github.com/repos/$($originRepo)/license" -Headers $headers |
-            Select-Object @{ Name = "License"; Expression = { $_.license.spdx_id } } |
-            Select-Object -ExpandProperty License
-            if ('NOASSERTION' -eq $license) {
+        if (-not $var.ContainsKey('Filter')) {
+            Add-ManifestFailure -Name $var.Name -Stage 'Declaration' -Reason 'Missing Filter property'
+            continue
+        }
+
+        if ($NoNerdFont -and $var.Name -match 'NerdFont(Mono|Propo)?') {
+            continue
+        }
+
+        $file = "$PSScriptRoot\..\bucket\$($var.Name).json"
+        if (-not (Test-Path $file) -or $Force) {
+
+            Write-Host ''
+            Write-Host "manifest: $($var.Name).json" -ForegroundColor Green
+            Write-Host "homepage: https://github.com/$($var.Repo)"
+
+            $headers = New-GitHubHeaders
+
+            $originRepo = if ( $null -eq $var.Origin ) { $var.Repo } else { $var.Origin }
+            $metadata = Get-GitHubRepositoryMetadata -Repository $originRepo -Headers $headers -Cache $cache -FallbackLicense $var.License
+            $repo = $metadata.Repo
+            $license = $metadata.License
+            if ($var.ContainsKey('License')) {
                 $license = $var.License
             }
-            $cache[$cacheKey] = @{Repo = $repo; License = $license }
-        }
-        if ($var.ContainsKey('License')) {
-            $license = $var.License
-        }
 
-        if ($null -eq $repo) {
-            Write-Host "Failed to retrieve repository info for $($var.Repo)" -ForegroundColor Red
-            continue
-        }
-
-        $description = if ($null -ne $var.Desc) { $var.Desc } else { $repo.description }
-        Write-Host "description: $description"
-
-        if ($null -eq $license) {
-            Write-Host "Failed to retrieve license info for repository $($var.Repo)" -ForegroundColor Red
-            continue
-        }
-        Write-Host "license: $license"
-
-        $releaseUrl = "https://api.github.com/repos/$($var.Repo)/releases"
-        $urlKey = $releaseUrl.ToLower()
-
-        if ($releases.ContainsKey($urlKey)) {
-            $releaseInfo = $releases[$urlKey]
-        } else {
-            $releaseInfo = Invoke-RateLimitedRestMethod -Uri $releaseUrl -Headers $headers
-
-            if ($null -eq $releaseInfo) {
-                Write-Host "Failed to retrieve release info for repository $($var.Repo)" -ForegroundColor Red
+            if ($null -eq $repo) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Repository' -Reason "Failed to retrieve repository info for $($var.Repo)"
                 continue
             }
-            $releaseInfo = $releaseInfo | Sort-Object {
-                if ($_.published_at) { [datetime]$_.published_at } elseif ($_.created_at) { [datetime]$_.created_at } else { [datetime]::MinValue }
-            } -Descending
-            $releases[$urlKey] = $releaseInfo
-        }
 
-        $downloadUrl = $releaseInfo | ForEach-Object { $_.assets.browser_download_url } | Where-Object { $_ -match $var.Regex } | Select-Object -First 1
-
-        if ($null -eq $downloadUrl) {
-            Write-Host "Failed to find download url matching regex '$($var.Regex)' in repository $($var.Repo)" -ForegroundColor Red
-            continue
-        }
-        Write-Host "url: $downloadUrl"
-
-        $regex = [regex]::new($var.Regex)
-        $match = $regex.Match($downloadUrl)
-
-        # Handle multiple capture groups for complex versioning schemes
-        if ($match.Success -and $match.Groups.Count -gt 1) {
-            if ($match.Groups.Count -gt 2) {
-                # Multiple capture groups - create composite version from all available groups
-                if ($null -ne $var.Version) {
-                    $version = $var.Version
-                    for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                        $version = $version -replace [regex]::Escape('${' + $match.Groups[$i].Name + '}'), $match.Groups[$i].Value
-                    }
-                } else {
-                    $versionParts = @()
-                    for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                        $versionParts += $match.Groups[$i].Value
-                    }
-                    $version = $versionParts -join '.'
-                }
-            } else {
-                # Single capture group - use it as version
-                $version = $match.Groups[1].Value
-            }
-        } else {
-            $version = $null
-        }
-
-        if ($null -eq $version) {
-            Write-Host "Failed to retrieve version info for $($var.Repo)" -ForegroundColor Red
-            continue
-        }
-        Write-Host "version: $version"
-
-        # Generate autoupdate URL with appropriate variable substitutions
-        if ($match.Groups.Count -gt 2) {
-            # Multiple capture groups - replace each group with $match1, $match2, etc.
-            $versionUrl = $downloadUrl
-            for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                $groupValue = $match.Groups[$i].Value
-                $versionUrl = $versionUrl -replace [regex]::Escape($groupValue), "`$match$i"
-            }
-        } else {
-            $underscoreVersion = $version -replace [regex]::Escape('.'), '_'
-            $dashVersion = $version -replace [regex]::Escape('.'), '-'
-            $cleanVersion = $version -replace [regex]::Escape('.'), ''
-            # Single capture group - use standard version variables
-            $versionUrl = $downloadUrl -replace [regex]::Escape($version), '$version'
-            $versionUrl = $versionUrl -replace [regex]::Escape($underscoreVersion), '$underscoreVersion'
-            $versionUrl = $versionUrl -replace [regex]::Escape($dashVersion), '$dashVersion'
-            $versionUrl = $versionUrl -replace [regex]::Escape($cleanVersion), '$cleanVersion'
-        }
-
-        $cacheKey = $downloadUrl.toLower()
-        if ($hashes.ContainsKey($cacheKey)) {
-            $hash = $hashes[$cacheKey]
-        } else {
-            $name = $downloadUrl -split '/' | Select-Object -Last 1
-            $cleanVer = "$version" -replace '[^\w.-]', ''
-            $outfile = Join-Path ${env:TEMP} "v$cleanVer-$name"
-            if (-not (Test-Path $outfile)) {
-                Invoke-WebRequest -Uri $downloadUrl -Headers $headers -OutFile $outfile
-            } else {
-            }
-            if (-not (Test-Path $outfile)) {
-                Write-Host "Failed to download file from $downloadUrl" -ForegroundColor Red
+            $description = if ($null -ne $var.Desc) { $var.Desc } else { $repo.description }
+            if ([string]::IsNullOrWhiteSpace($description)) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Description' -Reason "Failed to retrieve description for repository $($var.Repo). Please specify 'Desc' in the font module."
                 continue
             }
-            $hash = (Get-FileHash $outfile -Algorithm SHA256).Hash.ToLower()
-            $hashes[$cacheKey] = $hash
-        }
+            Write-Host "description: $description"
 
-        if ($null -eq $hash) {
-            Write-Host "Failed to retrieve hash for $($var.Repo)" -ForegroundColor Red
-            continue
-        }
-        Write-Host "hash: $hash"
-
-        $manifest = [ordered]@{
-            "version"     = $version
-            "description" = $description
-            "homepage"    = "https://github.com/$($var.Repo)"
-            "license"     = $license
-            "url"         = $downloadUrl
-            "hash"        = $hash
-            "extract_dir" = $var.Dir
-            "installer"   = @{
-                "script" = @('$filter = ' + "'$($var.Filter)'")
+            if ($null -eq $license) {
+                Add-ManifestFailure -Name $var.Name -Stage 'License' -Reason "Failed to retrieve license info for repository $($var.Repo)"
+                continue
             }
-            "uninstaller" = @{
-                "script" = @('$filter = ' + "'$($var.Filter)'")
+            Write-Host "license: $license"
+
+            $useLatest = $var.ContainsKey('Latest') -and $var.Latest
+            $release = Get-GitHubReleaseData -Repository $var.Repo -Latest $useLatest -Headers $headers -Cache $releases
+            if ($null -eq $release) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Release' -Reason "Failed to retrieve release info for repository $($var.Repo)"
+                continue
             }
-            "checkver"    = [ordered]@{
-                "github"   = $releaseUrl
-                "jsonpath" = '$[*].assets[*].browser_download_url'
-                "regex"    = $var.Regex
+            $releaseInfo = $release.Info
+            $releaseUrl = $release.Url
+            $jsonPath = $release.JsonPath
+
+            try {
+                $downloadUrl = Find-GitHubDownloadUrl -ReleaseInfo $releaseInfo -Latest $useLatest -Regex $var.Regex
+            } catch {
+                Add-ManifestFailure -Name $var.Name -Stage 'Asset Resolution' -Reason $_.Exception.Message
+                continue
             }
-            "autoupdate"  = [ordered]@{
-                "url" = $versionUrl
+
+            if ($null -eq $downloadUrl) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Asset Resolution' -Reason "Failed to find download url matching regex '$($var.Regex)' in repository $($var.Repo)"
+                continue
             }
-        }
+            Write-Host "url: $downloadUrl"
 
-        # Add replace directive for fonts with multiple capture groups to generate composite version
-        if ($match.Groups.Count -gt 2) {
-            if ($null -ne $var.Version) {
-                $manifest.checkver["replace"] = $var.Version
-            } else {
-                $replacePattern = @()
-                for ($i = 1; $i -le $match.Groups.Count - 1; $i++) {
-                    $replacePattern += "`${$i}"
-                }
-                $manifest.checkver["replace"] = $replacePattern -join '.'
+            $versionInfo = Get-ManifestVersionInfo -Regex $var.Regex -DownloadUrl $downloadUrl -VersionTemplate $var.Version
+            if ($null -eq $versionInfo) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Version' -Reason "Failed to retrieve version info for $($var.Repo)"
+                continue
             }
+            $version = $versionInfo.Version
+            Write-Host "version: $version"
+
+            $hash = Get-ManifestArtifactHash -DownloadUrl $downloadUrl -Version $version -Headers $headers -Cache $hashes
+            if ($null -eq $hash) {
+                Add-ManifestFailure -Name $var.Name -Stage 'Download' -Reason "Failed to download file or compute hash from $downloadUrl"
+                continue
+            }
+            Write-Host "hash: $hash"
+
+            $manifestParams = @{
+                Declaration      = $var
+                VersionInfo      = $versionInfo
+                Release          = $release
+                Description      = $description
+                License          = $license
+                Hash             = $hash
+                DownloadUrl      = $downloadUrl
+                InstallerLines   = $installerLines
+                UninstallerLines = $uninstallerLines
+            }
+            try {
+                $manifest = New-ScoopManifest @manifestParams
+            } catch {
+                Add-ManifestFailure -Name $var.Name -Stage 'Manifest Rendering' -Reason $_.Exception.Message
+                continue
+            }
+
+            ConvertTo-Json $manifest | Out-File -Encoding utf8 -FilePath $file
+
+            $app = [System.IO.Path]::GetFileNameWithoutExtension($file)
+
+            & "$formatjson" $app
         }
 
-        foreach ($line in $installer) {
-            $manifest.installer.script += $line
+        if (-not $NoCheckVer) {
+            & "$PSScriptRoot\..\bin\checkver.ps1" $file -u
         }
-
-        foreach ($line in $uninstaller) {
-            $manifest.uninstaller.script += $line
-        }
-
-        $cleanManifest = [ordered]@{}
-        $manifest.GetEnumerator() | Where-Object { $null -ne $_.Value } | ForEach-Object {
-            $cleanManifest[$_.Key] = $_.Value
-        }
-        # $cleanManifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $file
-        ConvertTo-Json $cleanManifest | Out-File -Encoding utf8 -FilePath $file
-
-        $app = [System.IO.Path]::GetFileNameWithoutExtension($file)
-
-        & "$formatjson" $app
     }
+} finally {
+    Disable-ScoopGitHubAuthForCheckver $scoopAuth
+}
 
+Show-GitHubRateLimit
 
-    if (-not $NoCheckVer) {
-        & "$PSScriptRoot\..\bin\checkver.ps1" $file -u
+if ($failedManifests.Count -gt 0) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "Manifest generation failed for $($failedManifests.Count) manifest(s):" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    foreach ($fail in $failedManifests) {
+        Write-Host "  • [$($fail.Stage)] $($fail.Name): $($fail.Reason)" -ForegroundColor Yellow
     }
-
+    Write-Host ""
+    exit 1
 }

@@ -21,6 +21,14 @@ if ($env:CI -eq $true) {
         $gitRoot = (git -C $resolvedPath rev-parse --show-toplevel 2>$null)
         if (-not $gitRoot) { $gitRoot = $resolvedPath }
 
+        $normalizedGitRoot = $gitRoot.TrimEnd('\', '/')
+        $relPath = if ($resolvedPath.StartsWith($normalizedGitRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $resolvedPath.Substring($normalizedGitRoot.Length).TrimStart('\', '/').Replace('\', '/')
+        } else {
+            ''
+        }
+        $pathFilter = if ($relPath -and $relPath -ne '.') { @('--', $relPath) } else { @() }
+
         $rev = if ($Commit) {
             "$Commit^..$Commit"
         } elseif ($LeftRevision -and $RightRevision) {
@@ -32,17 +40,17 @@ if ($env:CI -eq $true) {
         }
 
         # Query git directly with --no-pager to prevent .NET pipe buffer deadlock
-        $files = @(git -C $gitRoot --no-pager diff --name-only $rev 2>$null)
-        if (-not $files -or $files.Count -eq 0) {
+        $files = @(git -C $gitRoot --no-pager diff --name-only --diff-filter=d $rev @pathFilter 2>$null)
+        if ($LASTEXITCODE -ne 0) {
             # Fallback if commit parent is not in shallow clone
-            $files = @(git -C $gitRoot --no-pager diff --name-only HEAD 2>$null)
+            $files = @(git -C $gitRoot --no-pager diff --name-only --diff-filter=d HEAD @pathFilter 2>$null)
         }
 
         if ($Include) {
             $matched = @()
             foreach ($f in $files) {
                 foreach ($inc in $Include) {
-                    if ($f -like $inc -or (Split-Path $f -Leaf) -like $inc -or "bucket/$f" -like $inc) {
+                    if ($f -like $inc -or (Split-Path $f -Leaf) -like $inc -or "$relPath/$f" -like $inc) {
                         $matched += $f
                         break
                     }
@@ -51,8 +59,12 @@ if ($env:CI -eq $true) {
             $files = $matched
         }
 
+        $targetPrefix = $resolvedPath.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
         foreach ($f in $files) {
-            Join-Path $gitRoot $f
+            $fullPath = [System.IO.Path]::GetFullPath((Join-Path $gitRoot $f))
+            if ((Test-Path -LiteralPath $fullPath) -and ($fullPath -eq $resolvedPath -or $fullPath.StartsWith($targetPrefix, [System.StringComparison]::OrdinalIgnoreCase))) {
+                $fullPath
+            }
         }
     }
 }
