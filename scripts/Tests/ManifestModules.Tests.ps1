@@ -280,7 +280,7 @@ Describe 'Nerd Fonts catalog mapping' {
             $cacheFile = Join-Path $tempDir 'nerdfonts-catalog.json'
             $cachedPayload | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $cacheFile
 
-            $catalog = Get-NerdFontsCatalog -CacheDirectory $tempDir
+            $catalog = @(Get-NerdFontsCatalog -CacheDirectory $tempDir)
             $catalog.Count | Should -Be 1
             $catalog[0].folderName | Should -Be 'TestFont'
         } finally {

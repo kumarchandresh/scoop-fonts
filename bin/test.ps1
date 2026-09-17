@@ -32,10 +32,10 @@ if ($env:CI -eq $true) {
         }
 
         # Query git directly with --no-pager to prevent .NET pipe buffer deadlock
-        $files = @(git -C $gitRoot --no-pager diff --name-only $rev 2>$null)
+        $files = @(git -C $gitRoot --no-pager diff --name-only --diff-filter=d $rev 2>$null)
         if (-not $files -or $files.Count -eq 0) {
             # Fallback if commit parent is not in shallow clone
-            $files = @(git -C $gitRoot --no-pager diff --name-only HEAD 2>$null)
+            $files = @(git -C $gitRoot --no-pager diff --name-only --diff-filter=d HEAD 2>$null)
         }
 
         if ($Include) {
@@ -52,7 +52,10 @@ if ($env:CI -eq $true) {
         }
 
         foreach ($f in $files) {
-            Join-Path $gitRoot $f
+            $fullPath = Join-Path $gitRoot $f
+            if (Test-Path -LiteralPath $fullPath) {
+                $fullPath
+            }
         }
     }
 }

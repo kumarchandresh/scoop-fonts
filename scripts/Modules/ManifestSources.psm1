@@ -284,7 +284,7 @@ function Get-NerdFontsCatalog {
     )
 
     if (-not $Force -and $null -ne $script:NerdFontsCatalog) {
-        return $script:NerdFontsCatalog
+        return , $script:NerdFontsCatalog
     }
 
     $cacheRoot = if ($CacheDirectory) {
@@ -301,8 +301,8 @@ function Get-NerdFontsCatalog {
             try {
                 $cachedData = Get-Content -LiteralPath $cacheFile -Raw | ConvertFrom-Json
                 if ($cachedData -and $cachedData.fonts -and $cachedData.fonts.Count -gt 0) {
-                    $script:NerdFontsCatalog = $cachedData.fonts
-                    return $script:NerdFontsCatalog
+                    $script:NerdFontsCatalog = @($cachedData.fonts)
+                    return , $script:NerdFontsCatalog
                 }
             } catch {
                 Write-Warning "Failed to read cached Nerd Fonts catalog: $($_.Exception.Message)"
@@ -316,7 +316,7 @@ function Get-NerdFontsCatalog {
     try {
         $response = Invoke-GitHubRateLimitedRestMethod -Uri 'https://raw.githubusercontent.com/ryanoasis/nerd-fonts/refs/heads/master/bin/scripts/lib/fonts.json' -Headers $headers
         if ($response -and $response.fonts) {
-            $fonts = $response.fonts
+            $fonts = @($response.fonts)
             $script:NerdFontsCatalog = $fonts
             try {
                 if (-not (Test-Path -LiteralPath $cacheRoot)) {
@@ -334,7 +334,7 @@ function Get-NerdFontsCatalog {
     if ($fonts.Count -eq 0) {
         Write-Warning 'Nerd Fonts: Failed to fetch release data from GitHub.'
     }
-    return $fonts
+    return , $fonts
 }
 
 function Get-ManifestArtifactHash {
