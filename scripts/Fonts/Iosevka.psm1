@@ -38,17 +38,15 @@ function Get-IosevkaResources {
 
     $standardTtcFonts = $fontNames | Where-Object { $_ -notmatch '^Iosevka(Fixed|Term)' }
     foreach ($fontName in $standardTtcFonts) {
-        foreach ($package in @(@('TTC', 'PkgTTC', ''), @('SuperTTC', 'SuperTTC', ''))) {
+        foreach ($package in @(@('TTC', 'PkgTTC'), @('SuperTTC', 'SuperTTC'))) {
             $prefix = $package[0]
             $archivePrefix = $package[1]
-            $sgr = $package[2]
             $suffix = "-$prefix"
             $name = "${fontName}${suffix}"
-            $filter = if ($sgr) { "SGr-${fontName}-.*\.ttc$" } else { "${fontName}-.*\.ttc$" }
             $manifests[$name] = @{
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/${archivePrefix}-${fontName}-[\d.]+\.zip"
-                Filter = $filter
+                Filter = "${fontName}.*\.ttc$"
                 Latest = $true
             }
         }
@@ -63,7 +61,7 @@ function Get-IosevkaResources {
             $manifests[$name] = @{
                 Repo   = 'be5invis/Iosevka'
                 Regex  = "/v?([\d.]+)/${archivePrefix}-${fontName}-[\d.]+\.zip"
-                Filter = "SGr-${fontName}-.*\.ttc$"
+                Filter = "SGr-${fontName}.*\.ttc$"
                 Latest = $true
             }
         }
@@ -71,11 +69,3 @@ function Get-IosevkaResources {
 
     return $manifests
 }
-
-
-
-
-
-
-
-

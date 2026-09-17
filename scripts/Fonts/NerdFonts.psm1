@@ -27,11 +27,13 @@ function Get-NerdFontsResources {
                 @{ patchedName = 'GohuFontuni11'; variants = @('', 'Mono', 'Propo') },
                 @{ patchedName = 'GohuFontuni14'; variants = @('', 'Mono', 'Propo') }
             ) }
+        'HeavyData'            = { param($p) @(@{ patchedName = $p; variants = @('', 'Propo') }) }
         'iA-Writer'            = { param($p) @(
                 @{ patchedName = 'iMWritingMono'; variants = @('', 'Propo') },
                 @{ patchedName = 'iMWritingDuo'; variants = @('', 'Propo') },
                 @{ patchedName = 'iMWritingQuat'; variants = @('', 'Propo') }
             ) }
+        'InconsolataLGC'       = { param($p) @(@{ patchedName = 'InconsolataLGC'; variants = @('', 'Mono', 'Propo') }) }
         'JetBrainsMono'        = { param($p) @(
                 @{ patchedName = 'JetBrainsMono'; variants = @('', 'Mono', 'Propo') },
                 @{ patchedName = 'JetBrainsMonoNL'; variants = @('', 'Mono', 'Propo') }
@@ -92,6 +94,7 @@ function Get-NerdFontsResources {
                 @{ patchedName = 'RecMonoSmCasual'; variants = @('', 'Mono', 'Propo') }
             ) }
         'Tinos'                = { param($p) @(@{ patchedName = $p; variants = @('', 'Propo') }) }
+        'Ubuntu'               = { param($p) @(@{ patchedName = $p; variants = @('', 'Propo') }) }
         'UbuntuSans'           = { param($p) @(
                 @{ patchedName = 'UbuntuSans'; variants = @('', 'Propo') },
                 @{ patchedName = 'UbuntuSansMono'; variants = @('', 'Mono', 'Propo') }
